@@ -1,0 +1,9 @@
+[submodule "Kleptomove"]
+	path = Kleptomove
+	url = https://github.com/pratikunterwegs/Kleptomove.git
+[submodule "kleptomove-sim"]
+	path = kleptomove-sim
+	url = https://github.com/pratikunterwegs/Kleptomove.git
+[submodule "ms-pattern-process"]
+	path = ms-pattern-process
+	url = https://git.overleaf.com/61229b4df7c6108661a4b695
