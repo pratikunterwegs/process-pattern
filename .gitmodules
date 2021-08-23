@@ -1,6 +1,3 @@
-[submodule "Kleptomove"]
-	path = Kleptomove
-	url = https://github.com/pratikunterwegs/Kleptomove.git
 [submodule "kleptomove-sim"]
 	path = kleptomove-sim
 	url = https://github.com/pratikunterwegs/Kleptomove.git
