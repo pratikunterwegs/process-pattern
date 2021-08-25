@@ -3,7 +3,8 @@
 ^process-pattern\.Rproj$
 ^LICENSE\.md$
 ^\.*\.Rmd
-^overleaf-kleptomove$
+^kleptomove-sim$
+^ms-pattern-process$
 ^_pkgdown\.yml$
 ^docs$
 ^pkgdown$
@@ -13,7 +14,7 @@
 ^figures$
 ^figure_scripts$
 ^scripts$
-^supplementary_material$
 ^Meta$
 ^codemeta\.json$
 ^\.github$
+^data/*sourceMe.R$
