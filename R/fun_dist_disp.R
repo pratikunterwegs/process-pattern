@@ -78,3 +78,16 @@ get_cumulative_distance = function(data_, landsize = 512) {
     t = data_$t
   )
 }
+
+#' Get the slope of cumulative distance over time.
+#'
+#' @param data_ A datatable of cumulative distances and timestamps,
+#' called \code{cuml\_dist} and \code{t}.
+#'
+#' @return An \code{lm} fit.
+#' @export
+get_avg_speed = function(data_) {
+  stats::coef(
+    stats::lm(cuml_dist ~ t, data = data_)
+  )
+}
