@@ -5,7 +5,7 @@ library(stringr)
 library(tidyr)
 library(dplyr)
 
-runs <- str_pad(seq_len(10), width = 3, pad = "0")
+runs <- str_pad(seq_len(1), width = 3, pad = "0")
 strategy <- c(
   "exploit",
   "interf",
@@ -45,4 +45,4 @@ lines[data_param$strategy == "random"] <-
 library(readr)
 date = Sys.time() %>% str_replace_all(" |:", "_")
 write_lines(lines,
-            file = glue("parameters/runs_{date}.bat"))
+            file = glue("kleptomove-sim/bin/Release/runs_{date}.bat"))
