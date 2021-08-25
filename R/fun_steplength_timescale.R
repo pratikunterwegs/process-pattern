@@ -6,7 +6,7 @@
 #' @param tscale The timesteps by which to subsample the data; e.g. 3 returns
 #' every third timestep.
 #'
-#' @return A list with steplengths and turning angles.
+#' @return The steplengths at some sampling timescale.
 #' @export
 get_steplengths = function(data_, landsize = 512, tscale = 3) {
   
@@ -30,10 +30,7 @@ get_steplengths = function(data_, landsize = 512, tscale = 3) {
   )]
   
   # return list data
-  list(
-    steplength = floor(sqrt(data_$dx ^ 2 + data_$dy ^ 2)),
-    angle = atan2(data_$dy,data_$ dx) * 180 / pi
-  )
+  steplength = floor(sqrt(data_$dx ^ 2 + data_$dy ^ 2))
 }
 
 #' Fit a distribution to observed steplengths.
@@ -43,7 +40,7 @@ get_steplengths = function(data_, landsize = 512, tscale = 3) {
 #'
 #' @return The distribution and fit parameters.
 #' @export
-fit_geom_dist = function(steplengths, dist_ = "nbinom") {
+fit_sl_dist = function(steplengths, dist_ = "nbinom") {
   
   fitdistrplus::fitdist(
     steplengths, distr = dist_
