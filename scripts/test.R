@@ -4,7 +4,10 @@ library(ggplot2)
 library(glue)
 library(stringr)
 
-files = glue("data/{str_pad(seq(0, 190, 10), 5, '0', side = 'left')}_pos.csv")
+# source functions
+source("R/fun_dist_disp.R")
+
+files = glue("data/{str_pad(seq(50, 190, 10), 5, '0', side = 'left')}_pos.csv")
 
 data = lapply(files, fread)
 
