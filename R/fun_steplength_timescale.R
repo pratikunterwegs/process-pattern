@@ -45,5 +45,4 @@ fit_sl_dist = function(steplengths, dist_ = "nbinom") {
   fit = fitdistrplus::fitdist(
     steplengths, distr = dist_
   )
-  fit
 }
