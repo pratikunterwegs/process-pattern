@@ -1,0 +1,50 @@
+---
+editor_options: 
+  chunk_output_type: console
+---
+
+# Agent weight evolution
+
+```{r}
+# load libraries
+library(data.table)
+library(glue)
+library(stringr)
+
+# source funs
+source("R/fun_dist_disp.R")
+source("R/fun_read_pos.R")
+source("R/fun_steplength_timescale.R")
+source("R/fun_read_config.R")
+```
+
+## List files and read data
+
+needs to be made recursive over dirs.
+
+```{r}
+paths = list.dirs(path = "data", recursive = F)
+paths = paths[grep("sim", paths)]
+
+# get weight data
+data = lapply(paths, get_wt_data, gen_start = 10)
+```
+
+## Read and link parameters
+
+```{r}
+params = lapply(paths, read_config)
+```
+
+```{r}
+data = Map(function(df, p) {
+  df[, names(p) := list(p["growth"], p["type"], p["rep_"])]
+}, data, params)
+
+data = rbindlist(data)
+```
+
+```{r}
+fwrite(data, file = "data/data_wt_gens.csv")
+```
+
