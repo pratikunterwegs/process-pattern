@@ -42,8 +42,8 @@ get_steplengths = function(data_, landsize = 512, tscale = 3) {
 #' @export
 fit_sl_dist = function(steplengths, dist_ = "nbinom") {
   
-  fitdistrplus::fitdist(
+  fit = fitdistrplus::fitdist(
     steplengths, distr = dist_
   )
-  
+  fit
 }
