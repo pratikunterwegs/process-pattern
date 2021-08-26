@@ -3,7 +3,7 @@ editor_options:
   chunk_output_type: console
 ---
 
-# Summarising agent paths
+# Summarising agent paths over generations
 
 ```{r}
 # load libraries
@@ -15,6 +15,7 @@ library(stringr)
 source("R/fun_dist_disp.R")
 source("R/fun_read_pos.R")
 source("R/fun_steplength_timescale.R")
+source("R/fun_read_config.R")
 ```
 
 ## List files and read data
@@ -22,13 +23,20 @@ source("R/fun_steplength_timescale.R")
 needs to be made recursive over dirs.
 
 ```{r}
-# paths = list.dirs(path = "data", recursive = F)
-# paths = paths[grep("sim", paths)]
-paths = c(".")
+paths = list.dirs(path = "data", recursive = F)
+paths = paths[grep("sim", paths)]
+# paths = c("data")
 
 # read data
-data = lapply(paths, read_data, gen_start = 50, gen_end = 190)
+data = lapply(paths, read_data, gen_start = 0, gen_end = 190)
 ```
+
+## Read parameters
+
+```{r}
+params = lapply(paths, read_config)
+```
+
 
 ## Get distance and displacement
 
@@ -71,6 +79,8 @@ data = lapply(data, function(df) {
 
 ## Fit a neg binom distribution to step lengths
 
+### Fit distribution
+
 ```{r}
 data = lapply(data, function(df) {
   
@@ -86,26 +96,39 @@ data = lapply(data, function(df) {
 })
 ```
 
-## Link landscape metrics
-
-### Read landscape
-
-```{r}
-source("R/fun_link_landscape.R")
-
-# read landscape and link to movement
-quality_data <- read_landscape(
-  "data/data_parameters/kernels32.png"
-)
-```
-
-### Merge landscape data and path
+### Get distribution parameters
 
 ```{r}
 data = lapply(data, function(df) {
-  df[, land_summary := lapply(
-    paths, get_path_env_summary, land_data = quality_data
-  )]
+  df[, sld_param := lapply(sl_fit, function(sl_fit_) {
+    sl_fit_[[1]]
+  })]
+  
+  df[, nb_mu := vapply(sld_param, `[`, 2, FUN.VALUE = 2.0)]
+  
+  df[, c("sl_fit", "sld_param") := NULL]
+  
 })
+
 ```
 
+## Get final data
+
+```{r}
+# remove path data
+data = lapply(data, function(df) {
+  df[, avg_speed := vapply(avg_speed_fit, `[`, 2, FUN.VALUE = 2.0)]
+  df[, c("avg_speed_fit", "paths") := NULL]
+})
+
+# add parameters
+data = Map(function(df, p) {
+  df[, names(p) := list(p["growth"], p["type"], p["rep_"])]
+}, data, params)
+
+# bind list
+data = rbindlist(data)
+
+# save data
+fwrite(data, file = "data/data_path_summaries.csv")
+```

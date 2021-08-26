@@ -1,0 +1,27 @@
+
+## Link landscape metrics
+
+### Read landscape
+
+```{r}
+source("R/fun_link_landscape.R")
+
+# read landscape and link to movement
+quality_data <- read_landscape(
+  "data/data_parameters/kernels32.png"
+)
+
+item_data = read_landscape(
+  "data/data"
+)
+```
+
+### Merge landscape data and path
+
+```{r}
+data = lapply(data, function(df) {
+  df[, land_summary := lapply(
+    paths, get_path_env_summary, land_data = quality_data
+  )]
+})
+```
