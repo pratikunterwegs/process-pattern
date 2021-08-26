@@ -16,6 +16,7 @@ source("R/fun_dist_disp.R")
 source("R/fun_read_pos.R")
 source("R/fun_steplength_timescale.R")
 source("R/fun_read_config.R")
+source("R/fun_wt_vals.R")
 ```
 
 ## List files and read data
@@ -47,4 +48,3 @@ data = rbindlist(data)
 ```{r}
 fwrite(data, file = "data/data_wt_gens.csv")
 ```
-

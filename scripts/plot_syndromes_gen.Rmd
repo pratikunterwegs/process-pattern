@@ -20,10 +20,20 @@ data = fread("data/data_path_summaries.csv")
 wt_data = fread("data/data_wt_gens.csv")
 ```
 
+SOMETHING WRONG WITH MOVEMENT WEIGHTS PLOTS --- TOO MANY OBS
+
 ```{r}
+
+
 # transform wt data
-wt_data[, sprintf("wt_%i", seq(8)) := lapply(.SD, cut_wt_lower), 
+wt_data[, sprintf("wt_%i", seq(8)) := lapply(.SD, cut_wt_lower, steps = 70), 
         .SDcols = sprintf("wt_%i", seq(8))]
+
+# count over gens
+wt_data = melt(wt_data, id.vars = c("gen", "growth", "type", "rep_"))
+
+wt_data = wt_data[, .N, by = c("gen", "growth", "type", 
+                               "rep_", "variable", "value")]
 ```
 
 
@@ -39,35 +49,54 @@ labels_type = c(
 ### Step length distributions parameters
 
 ```{r}
-move_plot = 
-  ggplot(data, aes(g, nb_mu, group = g))+
-  geom_bin2d(bins = c(14, 170))+
-  scale_fill_viridis_c(
-    option = "C", direction = 1,
-    trans = "log10"
+move_plot =
+ggplot(data, aes(g, distance, group = g))+
+  geom_bin2d(binwidth = c(10, 0.1))+
+  # scale_fill_viridis_c(
+  #   option = "F", direction = -1,
+  #   trans = "sqrt"
+  # )+
+  scale_fill_continuous_sequential(
+    palette = "Heat 2",
+    trans = "sqrt",
+    limits = c(2, NA),
+    na.value = "transparent"
   )+
   scale_y_sqrt(
-    limits = c(1, 10)
+    # limits = c(1, 5)
   )+
   theme_test()+
   facet_grid(
-    type ~ rep_, 
+    type ~ growth, 
     labeller = labeller(
-      type = labels_type
+      type = labels_type,
+      growth = label_both
     )
+  )+
+  labs(
+    x = "Generation",
+    y = "Total distance"
   )
+
+# save
+ggsave(
+  move_plot, filename = "figures/fig_distance_hmap.png"
+)
 ```
 
 ### Weight data
 
 ```{r}
-ggplot(wt_data)+
-  geom_bin2d(
-    aes(gen, wt_4),
-    binwidth = c(10, 0.025)
+ggplot(wt_data[variable %in% c("wt_4")])+
+  geom_tile(
+    aes(gen, value, fill = N)
   )+
   scale_fill_viridis_c(
-    option = "C", direction = -1
+    option = "C", direction = -1,
+    limits = c()
+  )+
+  facet_grid(
+    variable ~ growth, scales = "free_y"
   )
   
 ```

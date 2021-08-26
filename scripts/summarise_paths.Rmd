@@ -28,7 +28,7 @@ paths = paths[grep("sim", paths)]
 # paths = c("data")
 
 # read data
-data = lapply(paths, read_data, gen_start = 0, gen_end = 190)
+data = lapply(paths, read_data, gen_start = 10, gen_end = 240)
 ```
 
 ## Read parameters
@@ -130,5 +130,4 @@ data = Map(function(df, p) {
 data = rbindlist(data)
 
 # save data
-fwrite(data, file = "data/data_path_summaries.csv")
-```
+fwrite(data, file = "data/data_path_summaries.csv")```
