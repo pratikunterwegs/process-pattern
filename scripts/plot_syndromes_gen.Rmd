@@ -17,7 +17,15 @@ library(colorspace)
 
 ```{r}
 data = fread("data/data_path_summaries.csv")
+wt_data = fread("data/data_wt_gens.csv")
 ```
+
+```{r}
+# transform wt data
+wt_data[, sprintf("wt_%i", seq(8)) := lapply(.SD, cut_wt_lower), 
+        .SDcols = sprintf("wt_%i", seq(8))]
+```
+
 
 ## Plot data
 
@@ -28,9 +36,11 @@ labels_type = c(
 )
 ```
 
+### Step length distributions parameters
 
 ```{r}
-ggplot(data, aes(g, nb_mu, group = g))+
+move_plot = 
+  ggplot(data, aes(g, nb_mu, group = g))+
   geom_bin2d(bins = c(14, 170))+
   scale_fill_viridis_c(
     option = "C", direction = 1,
@@ -48,4 +58,17 @@ ggplot(data, aes(g, nb_mu, group = g))+
   )
 ```
 
+### Weight data
+
+```{r}
+ggplot(wt_data)+
+  geom_bin2d(
+    aes(gen, wt_4),
+    binwidth = c(10, 0.025)
+  )+
+  scale_fill_viridis_c(
+    option = "C", direction = -1
+  )
+  
+```
 
