@@ -1,5 +1,5 @@
 
-# Individual Gambit
+# Equal Interval
 
 read data
 
@@ -17,40 +17,16 @@ for (path in paths) {
   lt_data = glue("{path}/00250_pos.csv")
   param = lapply(path, read_config)
 
-  data = data[, list(paths = list(.SD)), by = c("id")]
+  # round tstep to nearest 1000
+  data[, interval := round(t, -3)]
+
+  data = data[, list(paths = list(.SD)), by = c("id", "t")]
   data[, c("displacement", "distance") := list(
     vapply(paths, get_displacement, FUN.VALUE = 1.0),
     vapply(paths, get_distance, FUN.VALUE = 1L)
   )]
 
-  # get cdist data
-  data[, cdist_data := lapply(
-    paths, get_cumulative_distance
-  )]
-  
-  data[, avg_speed_fit := lapply(cdist_data, get_avg_speed)]
-  
-  # remove cdist data
-  data[, cdist_data := NULL]
-
-  # first subsample and get steplengths
-  data[, sl_ := lapply(paths, get_steplengths, tscale = 5)]
-  
-  # get nbinom fit
-  data[, sl_fit := lapply(sl_, fit_sl_dist)]
-  
-  data[, sl_ := NULL]
-
-  data[, sld_param := lapply(sl_fit, function(sl_fit_) {
-    sl_fit_[[1]]
-  })]
-  
-  data[, nb_mu := vapply(sld_param, `[`, 2, FUN.VALUE = 2.0)]
-  
-  data[, c("sl_fit", "sld_param") := NULL]
-
-  data[, avg_speed := vapply(avg_speed_fit, `[`, 2, FUN.VALUE = 2.0)]
-  data[, c("avg_speed_fit", "paths") := NULL]
+  ## LINK LANDSCAPE DATA
 
   if (dir.exists("data/lt_tracks")) {
     dir.create("data/lt_tracks")
@@ -58,15 +34,12 @@ for (path in paths) {
 
     data[, names(param) := list(param["growth"], param["type"], param["rep_"])]
      fwrite(
-       glue("data/lt_tracks/data_lt_summary{param["growth"]}_{param["type"]}_{param["rep_"]}")
+       glue("data/lt_tracks/data_lt_{param["growth"]}_{param["type"]}_{param["rep_"]}")
      )
   }
 
 }
 ```
-
-
-**NEEDS WORK**
 
 ## Link landscape metrics
 
