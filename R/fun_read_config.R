@@ -5,7 +5,7 @@
 #'
 #' @return A list with the growth rate and type.
 #' @export
-process_configs = function(path) {
+read_config = function(path) {
   config_file = glue::glue("{path}/config.ini")
   config_file = readLines(config_file)
   
@@ -15,8 +15,11 @@ process_configs = function(path) {
   growth = config_file[grep("item_growth", config_file)]
   growth = stringr::str_extract(growth, "0\\.\\d+")
   
+  rep_ = stringr::str_extract(path, "(\\d{3})")
+  
   c(
     growth = growth,
-    type = type
+    type = type,
+    rep_ = rep_
   )
 }
