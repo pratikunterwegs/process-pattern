@@ -10,7 +10,12 @@ read_config = function(path) {
   config_file = readLines(config_file)
   
   type = config_file[grep("agents.forage", config_file)]
-  type = ifelse(stringr::str_extract(type, "\\d{1}") == "0", "exploit", "interf")
+  type = ifelse(stringr::str_extract(type, "\\d{1}") == "1", "exploit", "interf")
+  
+  random = config_file[grep("mask", config_file)]
+  random = stringr::str_extract(random, "\\d+")
+  
+  type = ifelse(random == "1", type, "random")
   
   growth = config_file[grep("item_growth", config_file)]
   growth = stringr::str_extract(growth, "0\\.\\d+")
