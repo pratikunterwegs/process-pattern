@@ -28,7 +28,8 @@ paths = list.dirs(path = "data", recursive = F)
 paths = paths[grep("sim", paths)]
 
 # get weight data
-data = lapply(paths, get_wt_data, gen_start = 10, n_agents = 1000)
+data = lapply(paths, get_wt_data, gen_start = 250,, gen_end = 250,
+  n_agents = 1000)
 ```
 
 ## Read and link parameters
@@ -46,5 +47,5 @@ data = rbindlist(data)
 ```
 
 ```{r}
-fwrite(data, file = "data/data_wt_gens.csv")
+fwrite(data, file = "data/data_lt_wt_gens.csv")
 ```
