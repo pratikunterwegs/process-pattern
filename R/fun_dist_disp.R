@@ -91,3 +91,16 @@ get_avg_speed = function(data_) {
     stats::lm(cuml_dist ~ t, data = data_)
   )
 }
+
+#' Scale and wrap coordinates.
+#'
+#' @param v The coordinate vector.
+#'
+#' @return Wrapped, scaled coordinates.
+#' @export
+scale_wrap_coords = function(v) {
+  v = c(0, diff(v))
+  v[v < -10] = 1
+  v[v > 10] = -1
+  cumsum(v)
+}
