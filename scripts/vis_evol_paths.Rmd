@@ -1,0 +1,111 @@
+---
+editor_options: 
+  chunk_output_type: console
+---
+
+# Vis evolved paths agent paths over generations
+
+```{r}
+# load libraries
+library(data.table)
+library(glue)
+library(stringr)
+
+library(ggplot2)
+library(patchwork)
+
+# source funs
+source("R/fun_dist_disp.R")
+source("R/fun_read_pos.R")
+source("R/fun_steplength_timescale.R")
+source("R/fun_read_config.R")
+source("R/fun_link_landscape.R")
+```
+
+## List files and read data
+
+needs to be made recursive over dirs.
+
+```{r}
+paths = list.dirs(path = "data", recursive = F)
+paths = paths[grep("sim", paths)]
+# paths = c("data")
+
+# read data
+data = lapply(paths, read_data, gen_start = 250, gen_end = 250)
+```
+
+## Read parameters
+
+```{r}
+params = lapply(paths, read_config)
+rm(paths)
+```
+
+
+## Get distance and displacement
+
+```{r}
+# split by interval
+data = lapply(data, function(df) {
+  df[, interval := round(t, digits = -3)]
+  df
+})
+
+# get distance and displacement
+data = lapply(data, function(df) {
+  df = df[, list(paths = list(.SD)), by = c("id", "interval")]
+  df[, c("displacement", "distance") := list(
+    vapply(paths, get_displacement, FUN.VALUE = 1.0),
+    vapply(paths, get_distance, FUN.VALUE = 1L)
+  )]
+  
+  df
+})
+```
+
+## Select individual paths
+
+```{r}
+data_id = lapply(data, function(df) {
+  df[id < 4]
+})
+
+# link params
+data_id = Map(data_id, params, f = function(df, p) {
+  df[, names(p) := list(p["growth"], p["type"], p["rep_"])]
+  df
+})
+
+# bind
+data_id = rbindlist(data_id)
+
+data_id = data_id[interval %in% c(1000, 3000, 6000, 8000)]
+
+# transform paths using first point as origin to handle wrapping
+data_id[, paths := lapply(paths, function(df) {
+  df$x_wrap = scale_wrap_coords(df$x) + rnorm(length(df$x), 0, 0.3)
+  df$y_wrap = scale_wrap_coords(df$y) + rnorm(length(df$x), 0, 0.3)
+  df
+})]
+```
+
+Unnest the path data.
+
+```{r}
+data_id = data_id[, unlist(paths, recursive = F), 
+                  by = c("id", "interval", "growth", "type", "rep_")]
+
+# set order
+setorder(data_id, id, t)
+```
+
+```{r}
+prod = read_landscape("data/data_parameters/kernels32.png")
+data_id = link_landscape(data_id, prod)
+setorder(data_id, id, t)
+```
+
+```{r}
+fwrite(data_id, file = "data/data_lt_plot.csv")
+```
