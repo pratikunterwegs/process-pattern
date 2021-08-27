@@ -45,7 +45,7 @@ get_wt_data <- function(filepath,
     dt_[, gen := g]
 
     # add id
-    dt_[, id := seq(nrow(dt_))]
+    dt_[, id := seq(nrow(dt_)) - 1]
     
     dt_
     
