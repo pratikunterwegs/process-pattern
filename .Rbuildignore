@@ -10,7 +10,7 @@
 ^pkgdown$
 ^docs$
 ^data_sim$
-^data$
+^data\*$
 ^figures$
 ^figure_scripts$
 ^scripts$
