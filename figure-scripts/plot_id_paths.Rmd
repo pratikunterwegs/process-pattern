@@ -3,6 +3,8 @@ editor_options:
   chunk_output_type: console
 ---
 
+# Plot variation within and between scenarios
+
 ```{r}
 library(data.table)
 library(ggplot2)
@@ -10,15 +12,14 @@ library(colorspace)
 library(patchwork)
 ```
 
+## Figures for movement paths
+
 ```{r}
 data = fread("data/data_lt_plot.csv")[growth == 0.01,]
 ```
 
 ```{r}
 data = split(data, by = c("type"))
-data = lapply(data, function(df) {
-  split(df, by = "id")
-})
 ```
 
 ```{r}
@@ -29,7 +30,7 @@ label_interval = c(
   "8000" = "T: 7,500 - 8,500"
 )
 
-make_id_plots = function(df) {
+make_id_plots = function(df, type) {
   ggplot(df)+
     geom_hline(
       yintercept = 0, size = 0.1, col = "grey",
@@ -67,17 +68,81 @@ make_id_plots = function(df) {
     axis.title = element_blank(),
     # axis.ticks = element_blank(),
     panel.grid = element_blank()
+  )+
+  labs(
+    title = sprintf("Scenario:%s", type)
   )
 }
 ```
 
 
 ```{r}
-plots = lapply(data, make_id_plots)
+plots = Map(data, names(data), f = make_id_plots)
 
-wrap_plots(
+plot_move = wrap_plots(
   plots[c("exploit", "interf")],
   ncol = 1
+)
+```
+
+## Figures for path statistics
+
+```{r}
+data_stats = fread("data/data_lt_path_summaries.csv")
+
+plot_dist_hist = 
+  ggplot(data_stats[interval %in% c(1000, 3000, 6000, 8000) & type != "random"])+
+  geom_vline(
+    xintercept = 250,
+    col = "red",
+    lty = 2,
+    size = 0.2
+  )+
+  geom_histogram(
+    aes(distance),
+    fill = "steelblue"
+  )+
+  facet_wrap(~type, ncol = 1, scales = "free_x")+
+  theme_classic()+
+  theme(
+    strip.background = element_blank(),
+    strip.text = element_text(
+      face = "italic"
+    ),
+    # axis.text = element_blank(),
+    # axis.title = element_blank(),
+    # axis.ticks = element_blank(),
+    panel.grid.minor = element_blank()
+  )+
+  coord_cartesian(
+    expand = F,
+    xlim = c(0, 1000),
+    ylim = c(0, 200)
+  )+
+  labs(
+    y = "# Tracks",
+    x = "Distance"
+  )
+```
+
+## Plot weights distribution
+
+## Wrap all plots
+
+```{r}
+fig_id_var = 
+  wrap_plots(
+    plot_move,
+    plot_dist_hist,
+    ncol = 2,
+    design = "AAAAB"
+  )
+
+ggsave(
+  plot = fig_id_var,
+  filename = "figures/fig_id_variation_distance.png",
+  width = 7,
+  height = 4
 )
 ```
 
