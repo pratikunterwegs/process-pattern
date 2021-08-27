@@ -1,0 +1,83 @@
+---
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r}
+library(data.table)
+library(ggplot2)
+library(colorspace)
+library(patchwork)
+```
+
+```{r}
+data = fread("data/data_lt_plot.csv")[growth == 0.01,]
+```
+
+```{r}
+data = split(data, by = c("type"))
+data = lapply(data, function(df) {
+  split(df, by = "id")
+})
+```
+
+```{r}
+label_interval = c(
+  "1000" = "T:   500 - 1,500",
+  "3000" = "T: 2,500 - 3,500",
+  "6000" = "T: 5,500 - 6,500",
+  "8000" = "T: 7,500 - 8,500"
+)
+
+make_id_plots = function(df) {
+  ggplot(df)+
+    geom_hline(
+      yintercept = 0, size = 0.1, col = "grey",
+      lty = 2
+    )+
+    geom_vline(
+      xintercept = 0, size = 0.1, col = "grey",
+      lty = 2
+    )+
+  geom_path(
+    aes(x_wrap, y_wrap,
+        group = interaction(id, interval),
+        col = factor(id)),
+    show.legend = F
+  )+
+  scale_color_discrete_qualitative(
+  )+
+  facet_wrap(
+    ~interval,
+    ncol = 4,
+    labeller = labeller(
+      interval = label_interval
+    )
+  )+
+  coord_cartesian(
+    xlim = c(-70, 70),
+    ylim = c(-70, 70),
+    expand = F
+  )+
+  theme(
+    strip.text = element_text(
+      face = "italic"
+    ),
+    # axis.text = element_blank(),
+    axis.title = element_blank(),
+    # axis.ticks = element_blank(),
+    panel.grid = element_blank()
+  )
+}
+```
+
+
+```{r}
+plots = lapply(data, make_id_plots)
+
+wrap_plots(
+  plots[c("exploit", "interf")],
+  ncol = 1
+)
+```
+
