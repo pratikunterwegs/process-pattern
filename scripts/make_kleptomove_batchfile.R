@@ -20,7 +20,7 @@ mask <- "{0,0,0}"
 data_param <- crossing(replicate = runs, strategy, regrowth) %>% 
   mutate(
     outdir = glue('{strategy}_{replicate}'),
-    agents.forage = as.numeric(strategy == "foragers"),
+    agents.forage = as.numeric(strategy == "exploit"),
     agents.obligate = as.numeric(strategy == "obligate")
   )
 
