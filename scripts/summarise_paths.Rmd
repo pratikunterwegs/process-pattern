@@ -28,7 +28,7 @@ paths = paths[grep("sim", paths)]
 # paths = c("data")
 
 # read data
-data = lapply(paths, read_data, gen_start = 10, gen_end = 240)
+data = lapply(paths, read_data, gen_start = 250, gen_end = 250)
 ```
 
 ## Read parameters
@@ -41,9 +41,15 @@ params = lapply(paths, read_config)
 ## Get distance and displacement
 
 ```{r}
+# split by interval
+data = lapply(data, function(df) {
+  df[, interval := round(t, digits = -3)]
+  df
+})
+
 # get distance and displacement
 data = lapply(data, function(df) {
-  df = df[, list(paths = list(.SD)), by = c("id", "g")]
+  df = df[, list(paths = list(.SD)), by = c("id", "interval")]
   df[, c("displacement", "distance") := list(
     vapply(paths, get_displacement, FUN.VALUE = 1.0),
     vapply(paths, get_distance, FUN.VALUE = 1L)
@@ -131,3 +137,4 @@ data = rbindlist(data)
 
 # save data
 fwrite(data, file = "data/data_path_summaries.csv")```
+```
