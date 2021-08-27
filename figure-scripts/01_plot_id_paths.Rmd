@@ -50,7 +50,7 @@ make_id_plots = function(df, type) {
   )+
   facet_wrap(
     ~interval,
-    ncol = 4,
+    ncol = 2,
     labeller = labeller(
       interval = label_interval
     )
@@ -127,22 +127,87 @@ plot_dist_hist =
 
 ## Plot weights distribution
 
+```{r}
+wt_data = fread("data/data_lt_wt_gens.csv")
+wt_data = wt_data[, c("id", "growth", "type", "rep_", 
+                      sprintf("wt_%i", c(2, 3, 4)))]
+
+setnames(wt_data, old = c("wt_2", "wt_3", "wt_4"), 
+         new = c("sN", "sH", "sP"))
+wt_data = melt(wt_data, id.vars = c("id", "growth", "type", "rep_"))
+
+# scale wts
+wt_data[, value := cut_wt_lower(value, steps = 100, scale = 20)]
+
+wt_data = wt_data[, list(pW = .N / 1000), by = c("growth", "type", "rep_", "variable", "value")]
+wt_data[, col := case_when(
+  variable == "sN" ~ "red",
+  variable == "sH" ~ "darkblue",
+  variable == "sP" ~ "darkgreen"
+)]
+```
+
+```{r}
+plot_wt_dist = 
+  ggplot(wt_data[growth == 0.01 & type != "random" & pW >= 0.01])+
+  geom_hline(
+    yintercept = 0, lty = 2,
+    col = "grey"
+  )+
+  geom_tile(
+    aes(
+      variable, value,
+      fill = variable,
+      alpha = pW
+    ),
+    show.legend = F
+  )+
+  scale_fill_discrete_qualitative(
+    # trans = "log10",
+    # palette = "Harmonic", rev = F
+    # limits = c(0.01, NA),
+    # na.value = "transparent"
+  )+
+  scale_alpha_continuous(
+    range = c(0.5, 1), trans = "sqrt"
+  )+
+  theme_classic()+
+  theme(
+    strip.background = element_blank(),
+    strip.text = element_text(
+      face = "italic"
+    ),
+    # axis.text = element_blank(),
+    # axis.title = element_blank(),
+    # axis.ticks = element_blank(),
+    panel.grid.minor = element_blank()
+  )+
+  facet_wrap(~type, scales = "free_y", ncol = 2)+
+  coord_cartesian(ylim = c(-1, 1))+
+  labs(
+    x = "Movement weight",
+    y = "Weight value"
+  )
+```
+
+
 ## Wrap all plots
 
 ```{r}
-fig_id_var = 
+fig_id_var =
   wrap_plots(
     plot_move,
     plot_dist_hist,
+    plot_wt_dist,
     ncol = 2,
-    design = "AAAAB"
+    design = "AAB\nAAC"
   )
 
 ggsave(
   plot = fig_id_var,
   filename = "figures/fig_id_variation_distance.png",
-  width = 7,
-  height = 4
+  width = 6,
+  height = 8
 )
 ```
 
