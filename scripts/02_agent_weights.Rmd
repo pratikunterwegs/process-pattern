@@ -28,7 +28,7 @@ paths = list.dirs(path = "data", recursive = F)
 paths = paths[grep("sim", paths)]
 
 # get weight data
-data = lapply(paths, get_wt_data, gen_start = 250,, gen_end = 250,
+data = lapply(paths, get_wt_data, gen_start = 250, gen_end = 250,
   n_agents = 1000)
 ```
 
