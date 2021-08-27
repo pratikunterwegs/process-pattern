@@ -11,6 +11,11 @@ read_landscape <- function(landscape_file, layer = 1,
   # read the layer-th layer
   land <- png::readPNG(landscape_file)[, , layer]
   
+  # sum over layers if more than 1
+  if (length(dim(land)) == 3) {
+    land <- rowSums(land, dims = 2)
+  }
+  
   # make data.table
   land <- data.table::as.data.table(land)
   # set names
