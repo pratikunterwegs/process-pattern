@@ -141,4 +141,3 @@ data$paths = NULL
 # save data
 fwrite(data, file = "data/data_lt_path_summaries.csv")
 ```
-```
