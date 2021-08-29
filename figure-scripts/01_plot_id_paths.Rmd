@@ -142,13 +142,14 @@ wt_data[, value := cut_wt_lower(value, steps = 100, scale = 20)]
 wt_data = wt_data[, list(pW = .N / 1000), by = c("growth", "type", "rep_", "variable", "value")]
 wt_data[, col := case_when(
   variable == "sN" ~ "red",
-  variable == "sH" ~ "darkblue",
+  variable == "sH" ~ "steelblue",
   variable == "sP" ~ "darkgreen"
 )]
+wt_data[, col := scales::alpha(col, pW*10)]
 ```
 
 ```{r}
-plot_wt_dist = 
+plot_wt_dist =
   ggplot(wt_data[growth == 0.01 & type != "random" & pW >= 0.01])+
   geom_hline(
     yintercept = 0, lty = 2,
@@ -157,20 +158,13 @@ plot_wt_dist =
   geom_tile(
     aes(
       variable, value,
-      fill = variable,
-      alpha = pW
+      fill = col
+      # alpha = pW
     ),
+    width = 0.8,
     show.legend = F
   )+
-  scale_fill_discrete_qualitative(
-    # trans = "log10",
-    # palette = "Harmonic", rev = F
-    # limits = c(0.01, NA),
-    # na.value = "transparent"
-  )+
-  scale_alpha_continuous(
-    range = c(0.5, 1), trans = "sqrt"
-  )+
+  scale_fill_identity()+
   theme_classic()+
   theme(
     strip.background = element_blank(),
