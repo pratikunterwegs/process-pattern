@@ -51,11 +51,21 @@ plot_intake_gen =
     col = "grey40",
     lty = 2
   )+
-  scale_fill_continuous_sequential(
-    palette = "Terrain"
+  scale_fill_viridis_c(
+    option = "G",
+    direction = -1
   )+
-  facet_wrap(~type, scales = "free_y")+
-  theme_classic()+
+  facet_wrap(~type, scales = "free_y",
+             labeller = labeller(
+               type = c(
+                 "exploit" = "Exploit. comp.",
+                 "interf" = "Interf. comp."
+               )
+             )
+  )+
+  theme_classic(
+    base_size = 10
+  )+
   theme(
     legend.position = "top",
     legend.key.height = unit(2, units = "mm"),
@@ -113,11 +123,21 @@ plot_dist_gen =
     col = "grey40",
     lty = 2
   )+
-  scale_fill_continuous_sequential(
-    palette = "Heat"
+  scale_fill_viridis_c(
+    option = "F",
+    direction = -1
   )+
-  facet_wrap(~type, scales = "free_y")+
-  theme_classic()+
+  facet_wrap(~type, scales = "free_y",
+             labeller = labeller(
+               type = c(
+                 "exploit" = "Exploit. comp.",
+                 "interf" = "Interf. comp."
+               )
+             )
+  )+
+  theme_classic(
+    base_size = 10
+  )+
   theme(
     legend.position = "top",
     legend.key.height = unit(2, units = "mm"),
@@ -125,15 +145,10 @@ plot_dist_gen =
     strip.text = element_text(
       face = "italic"
     ),
-    # axis.text = element_blank(),
-    # axis.title = element_blank(),
-    # axis.ticks = element_blank(),
     panel.grid.minor = element_blank()
   )+
   coord_cartesian(
-    expand = F,
-    # xlim = c(0, 260),
-    # ylim = c(0, 400)
+    expand = F
   )+
   labs(
     y = "Distance",
@@ -145,18 +160,24 @@ plot_dist_gen =
 ## Wrap figures
 
 ```{r}
-fig_intake_distance_gen = 
+fig_intake_distance_gen =
   wrap_plots(
-  plot_intake_gen,
-  plot_dist_gen,
-  ncol = 1
-)
+    plot_intake_gen,
+    plot_dist_gen,
+    ncol = 1
+  ) +
+  plot_annotation(
+    tag_levels = "A"
+  ) &
+  theme(
+    plot.tag = element_text(face = "bold")
+  )
 
 # save
 ggsave(
   fig_intake_distance_gen,
   filename = "figures/fig_intake_sdist_gen.png",
-  height = 6, width = 4.75
+  height = 6, width = 4.5
 )
 ```
 
