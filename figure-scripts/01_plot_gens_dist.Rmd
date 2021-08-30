@@ -1,0 +1,162 @@
+---
+editor_options: 
+  chunk_output_type: console
+---
+
+# Plot variation within and between scenarios
+
+```{r}
+library(data.table)
+library(ggplot2)
+library(colorspace)
+library(patchwork)
+```
+
+## Load data
+
+```{r}
+data = fread("data/data_gens_dist_summary.csv")
+```
+
+## Summarise energy
+
+```{r}
+data_int_summary = data[, list(
+  mean_int = mean(intake),
+  sd_int = sd(intake)
+), by = c("type", "growth", "g", "rep_")]
+```
+
+```{r}
+plot_intake_gen = 
+  ggplot(data_int_summary[growth == 0.01 & type != "random"])+
+  geom_bin2d(
+    data = data[growth == 0.01 & type != "random"],
+    aes(
+      g, intake
+    ),
+    binwidth = c(10, 1)
+  )+
+  geom_path(
+    aes(g, mean_int,
+        group = rep_)
+  )+
+  geom_ribbon(
+    aes(g, 
+        ymin = mean_int - sd_int,
+        ymax = mean_int + sd_int,
+        group = rep_
+    ),
+    fill = "transparent",
+    col = "grey40",
+    lty = 2
+  )+
+  scale_fill_continuous_sequential(
+    palette = "Terrain"
+  )+
+  facet_wrap(~type, scales = "free_y")+
+  theme_classic()+
+  theme(
+    legend.position = "top",
+    legend.key.height = unit(2, units = "mm"),
+    strip.background = element_blank(),
+    strip.text = element_text(
+      face = "italic"
+    ),
+    # axis.text = element_blank(),
+    # axis.title = element_blank(),
+    # axis.ticks = element_blank(),
+    panel.grid.minor = element_blank()
+  )+
+  coord_cartesian(
+    expand = F,
+    # xlim = c(0, 260),
+    # ylim = c(0, 400)
+  )+
+  labs(
+    y = "Intake",
+    x = "Generation",
+    fill = "# Agents"
+  )
+```
+
+## Summarise distance
+
+```{r}
+data_dist_summary = data[, list(
+  mean_dist = mean(distance),
+  sd_dist = sd(distance)
+), by = c("type", "growth", "g", "rep_")]
+```
+
+```{r}
+plot_dist_gen = 
+  ggplot(data_dist_summary[growth == 0.01 & type != "random"])+
+  geom_bin2d(
+    data = data[growth == 0.01 & type != "random"],
+    aes(
+      g, distance
+    ),
+    binwidth = c(10, 5)
+  )+
+  geom_path(
+    aes(g, mean_dist,
+        group = rep_)
+  )+
+  geom_ribbon(
+    aes(g, 
+        ymin = mean_dist - sd_dist,
+        ymax = mean_dist + sd_dist,
+        group = rep_
+    ),
+    fill = "transparent",
+    col = "grey40",
+    lty = 2
+  )+
+  scale_fill_continuous_sequential(
+    palette = "Heat"
+  )+
+  facet_wrap(~type, scales = "free_y")+
+  theme_classic()+
+  theme(
+    legend.position = "top",
+    legend.key.height = unit(2, units = "mm"),
+    strip.background = element_blank(),
+    strip.text = element_text(
+      face = "italic"
+    ),
+    # axis.text = element_blank(),
+    # axis.title = element_blank(),
+    # axis.ticks = element_blank(),
+    panel.grid.minor = element_blank()
+  )+
+  coord_cartesian(
+    expand = F,
+    # xlim = c(0, 260),
+    # ylim = c(0, 400)
+  )+
+  labs(
+    y = "Distance",
+    x = "Generation",
+    fill = "# Agents"
+  )
+```
+
+## Wrap figures
+
+```{r}
+fig_intake_distance_gen = 
+  wrap_plots(
+  plot_intake_gen,
+  plot_dist_gen,
+  ncol = 1
+)
+
+# save
+ggsave(
+  fig_intake_distance_gen,
+  filename = "figures/fig_intake_sdist_gen.png",
+  height = 6, width = 4.75
+)
+```
+
