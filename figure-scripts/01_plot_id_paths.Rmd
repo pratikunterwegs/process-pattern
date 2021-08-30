@@ -10,6 +10,9 @@ library(data.table)
 library(ggplot2)
 library(colorspace)
 library(patchwork)
+
+# cut wt fun
+source("R/fun_wt_vals.R")
 ```
 
 ## Figures for movement paths
@@ -88,16 +91,10 @@ plot_move = wrap_plots(
 ## Figures for path statistics
 
 ```{r}
-data_stats = fread("data/data_lt_path_summaries.csv")
+data_stats = fread("data/data_lt_path_summaries.csv")[growth == 0.01,]
 
 plot_dist_hist = 
   ggplot(data_stats[interval %in% c(1000, 3000, 6000, 8000) & type != "random"])+
-  geom_vline(
-    xintercept = 250,
-    col = "red",
-    lty = 2,
-    size = 0.2
-  )+
   geom_histogram(
     aes(distance),
     fill = "steelblue"
@@ -116,8 +113,8 @@ plot_dist_hist =
   )+
   coord_cartesian(
     expand = F,
-    xlim = c(0, 1000),
-    ylim = c(0, 200)
+    xlim = c(200, 1000),
+    ylim = c(0, 50)
   )+
   labs(
     y = "# Tracks",
@@ -128,6 +125,7 @@ plot_dist_hist =
 ## Plot weights distribution
 
 ```{r}
+# read data
 wt_data = fread("data/data_lt_wt_gens.csv")
 wt_data = wt_data[, c("id", "growth", "type", "rep_", 
                       sprintf("wt_%i", c(2, 3, 4)))]
@@ -141,8 +139,8 @@ wt_data[, value := cut_wt_lower(value, steps = 100, scale = 20)]
 
 wt_data = wt_data[, list(pW = .N / 1000), by = c("growth", "type", "rep_", "variable", "value")]
 wt_data[, col := case_when(
-  variable == "sN" ~ "red",
-  variable == "sH" ~ "steelblue",
+  variable == "sN" ~ "darkred",
+  variable == "sH" ~ "darkblue",
   variable == "sP" ~ "darkgreen"
 )]
 wt_data[, col := scales::alpha(col, pW*10)]
@@ -159,7 +157,6 @@ plot_wt_dist =
     aes(
       variable, value,
       fill = col
-      # alpha = pW
     ),
     width = 0.8,
     show.legend = F
