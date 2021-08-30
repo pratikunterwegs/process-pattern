@@ -114,72 +114,9 @@ data = lapply(data, function(df) {
 })
 ```
 
-### Get cumulative distance and avg speed
-
-```{r}
-# # get fit as list col
-# data = lapply(data, function(df) {
-#   assertthat::assert_that(
-#     "paths" %in% names(df), 
-#     msg = "paths df listcol missing"
-#   )
-#   
-#   # get cdist data
-#   df[, cdist_data := lapply(
-#     paths, get_cumulative_distance
-#   )]
-#   
-#   df[, avg_speed_fit := lapply(cdist_data, get_avg_speed)]
-#   
-#   # remove cdist data
-#   df[, cdist_data := NULL]
-#   
-#   df
-# })
-```
-
-### Fit a neg binom distribution to step lengths
-
-```{r}
-# data = lapply(data, function(df) {
-#   
-#   # first subsample and get steplengths
-#   df[, sl_ := lapply(paths, get_steplengths, tscale = 5)]
-#   
-#   # get nbinom fit
-#   df[, sl_fit := lapply(sl_, fit_sl_dist)]
-#   
-#   df[, sl_ := NULL]
-#   
-#   df
-# })
-```
-
-### Get distribution parameters
-
-```{r}
-# data = lapply(data, function(df) {
-#   df[, sld_param := lapply(sl_fit, function(sl_fit_) {
-#     sl_fit_[[1]]
-#   })]
-#   
-#   df[, nb_mu := vapply(sld_param, `[`, 2, FUN.VALUE = 2.0)]
-#   
-#   df[, c("sl_fit", "sld_param") := NULL]
-#   
-# })
-
-```
-
 ### Get final data
 
 ```{r}
-# remove path data
-# data = lapply(data, function(df) {
-#   df[, avg_speed := vapply(avg_speed_fit, `[`, 2, FUN.VALUE = 2.0)]
-#   df[, c("avg_speed_fit", "paths") := NULL]
-# })
-
 # add parameters
 data = Map(function(df, p) {
   df[, names(p) := list(p["growth"], p["type"], p["rep_"])]
