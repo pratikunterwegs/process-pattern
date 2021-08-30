@@ -10,6 +10,9 @@ library(data.table)
 library(ggplot2)
 library(colorspace)
 library(patchwork)
+
+# local funs
+source("R/fun_wt_vals.R")
 ```
 
 ## Load data
@@ -51,9 +54,11 @@ plot_intake_gen =
     col = "grey40",
     lty = 2
   )+
-  scale_fill_viridis_c(
-    option = "G",
-    direction = -1
+  scale_fill_continuous_sequential(
+    palette = "Greens 2",
+    rev = T,
+    limits = c(NA, 25),
+    na.value = "darkgreen"
   )+
   facet_wrap(~type, scales = "free_y",
              labeller = labeller(
@@ -123,9 +128,11 @@ plot_dist_gen =
     col = "grey40",
     lty = 2
   )+
-  scale_fill_viridis_c(
-    option = "F",
-    direction = -1
+  scale_fill_continuous_sequential(
+    palette = "Blues 2",
+    rev = T,
+    limits = c(NA, 25),
+    na.value = "darkblue"
   )+
   facet_wrap(~type, scales = "free_y",
              labeller = labeller(
@@ -157,14 +164,92 @@ plot_dist_gen =
   )
 ```
 
+## Summarise weight evolution
+
+```{r}
+data_wt = data[, c("id", "g", "growth", "type", "rep_",
+                      sprintf("wt_%i", seq(2, 4, 1)))]
+
+# count props
+data_wt_count = melt(data_wt, id.vars = c("id", "g", "growth", "type", "rep_"))
+data_wt_count[, value := cut_wt_lower(value, steps = 25, scale = 40)]
+data_wt_count = data_wt_count[, list(pW = .N / 100), 
+              by = c("growth", "g", "type", "rep_", "variable", "value")]
+
+# rename weights
+data_wt_count[, variable := case_when(
+  variable == "wt_2" ~ "sN",
+  variable == "wt_3" ~ "sH",
+  variable == "wt_4" ~ "sP"
+)]
+
+# subset for index case
+data_wt_count = data_wt_count[growth == 0.01 & type != "random" & rep_ == 1, ]
+
+data_wt_count = split(data_wt_count, by = "type")
+```
+
+
+```{r}
+plot_wt_evo = function(df) {
+  ggplot(df[growth == 0.01 & type != "random"])+
+  geom_hline(
+    yintercept = 0, lty = 2,
+    col = "grey"
+  )+
+  geom_tile(
+    aes(g, value, fill = pW),
+    width = 10
+  )+
+  scale_fill_viridis_c(
+    option = "F", direction = -1,
+    limits = c(0.02, 1),
+    na.value = "transparent",
+    label = scales::percent
+  )+
+  scale_y_continuous(
+    trans = ggallin::ssqrt_trans
+  )+
+  facet_wrap(~variable, scales = "free_y")+
+  theme_classic(
+    base_size = 10
+  )+
+  theme(
+    legend.position = "top",
+    legend.text = element_text(size = 8),
+    legend.title = element_text(size = 8),
+    legend.key.height = unit(2, "mm"),
+    strip.background = element_blank(),
+    strip.text = element_text(
+      face = "italic"
+    )
+  )+
+  coord_cartesian(
+    ylim = c(-1, 1)
+  )+
+  labs(
+    x = "Generation",
+    y = "Scaled weight value",
+    fill = "% Agents"
+  )
+}
+```
+
+```{r}
+plots_wt_evo = lapply(data_wt_count[c("exploit", "interf")], plot_wt_evo)
+```
+
 ## Wrap figures
 
 ```{r}
-fig_intake_distance_gen =
+fig_evo_dyn =
   wrap_plots(
-    plot_intake_gen,
-    plot_dist_gen,
-    ncol = 1
+    list(
+      plot_intake_gen,
+      plot_dist_gen,
+      plots_wt_evo[["exploit"]],
+      plots_wt_evo[["interf"]]
+    )
   ) +
   plot_annotation(
     tag_levels = "A"
@@ -175,9 +260,9 @@ fig_intake_distance_gen =
 
 # save
 ggsave(
-  fig_intake_distance_gen,
-  filename = "figures/fig_intake_sdist_gen.png",
-  height = 6, width = 4.5
+  fig_evo_dyn,
+  filename = "figures/fig_evo_dyn.png",
+  height = 6, width = 6.5
 )
 ```
 
