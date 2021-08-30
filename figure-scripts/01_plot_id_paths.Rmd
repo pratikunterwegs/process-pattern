@@ -49,7 +49,8 @@ make_id_plots = function(df, type) {
         col = factor(id)),
     show.legend = F
   )+
-  scale_color_discrete_qualitative(
+  scale_color_discrete_sequential(
+    palette = "Hawaii"
   )+
   facet_wrap(
     ~interval,
@@ -63,6 +64,7 @@ make_id_plots = function(df, type) {
     ylim = c(-70, 70),
     expand = F
   )+
+  theme_minimal(base_size = 10)+
   theme(
     strip.text = element_text(
       face = "italic"
@@ -70,10 +72,10 @@ make_id_plots = function(df, type) {
     # axis.text = element_blank(),
     axis.title = element_blank(),
     # axis.ticks = element_blank(),
-    panel.grid = element_blank()
-  )+
-  labs(
-    title = sprintf("Scenario:%s", type)
+    panel.grid.minor = element_blank(),
+    panel.grid.major = element_line(
+      linetype = 1, size = 0.2
+    )
   )
 }
 ```
@@ -90,18 +92,68 @@ plot_move = wrap_plots(
 
 ## Figures for path statistics
 
+### Get data and cluster by strongest move weight
+
 ```{r}
+# get weight data
+data_wt = fread("data/data_lt_wt_gens.csv")[growth == 0.01,]
+
+# get wt
 data_stats = fread("data/data_lt_path_summaries.csv")[growth == 0.01,]
 
-plot_dist_hist = 
+# link to data_stats
+data_stats = merge(data_stats, data_wt)
+
+# class agents on wights
+data_stats[, cluster := apply(
+  data_stats[, c("wt_2", "wt_3", "wt_4")], 1, function(x){
+    which.max(abs(x))
+  })
+]
+data_stats[, cluster := case_when(
+  cluster == 1 ~ "Nhnd",
+  cluster == 2 ~ "Hand",
+  cluster == 3 ~ "Prey"
+)]
+data_stats[, cluster := factor(cluster, levels = c("Prey", "Hand", "Nhnd"))]
+```
+
+### Make plot
+
+```{r}
+plot_dist_hist =
   ggplot(data_stats[interval %in% c(1000, 3000, 6000, 8000) & type != "random"])+
   geom_histogram(
-    aes(distance),
-    fill = "steelblue"
+    aes(
+      distance,
+      fill = cluster
+    ),
+    bins = 20,
+    position = "identity"
+    # colour = "grey40"
   )+
-  facet_wrap(~type, ncol = 1, scales = "free_x")+
-  theme_classic()+
+  scale_fill_manual(
+    values = c(
+      "Prey" = "darkgreen",
+      "Nhnd" = "indianred1",
+      "Hand" = "steelblue"
+    ),
+    breaks = c("Prey", "Hand", "Nhnd")
+  )+
+  facet_wrap(~ type, ncol = 1, scales = "free_x",
+             labeller = labeller(
+               type = c(
+                 "exploit" = "Exploit. comp.",
+                 "interf" = "Interf. comp."
+               )
+             )
+  )+
+  theme_classic(base_size = 10)+
   theme(
+    legend.position = "top",
+    legend.text = element_text(size = 8),
+    legend.title = element_text(size = 8),
+    legend.key.width = unit(1, "mm"),
     strip.background = element_blank(),
     strip.text = element_text(
       face = "italic"
@@ -113,12 +165,12 @@ plot_dist_hist =
   )+
   coord_cartesian(
     expand = F,
-    xlim = c(200, 1000),
-    ylim = c(0, 50)
+    xlim = c(200, 800)
   )+
   labs(
     y = "# Tracks",
-    x = "Distance"
+    x = "Distance",
+    fill = "Strongest weight"
   )
 ```
 
@@ -140,7 +192,7 @@ wt_data[, value := cut_wt_lower(value, steps = 100, scale = 20)]
 wt_data = wt_data[, list(pW = .N / 1000), by = c("growth", "type", "rep_", "variable", "value")]
 wt_data[, col := case_when(
   variable == "sN" ~ "darkred",
-  variable == "sH" ~ "darkblue",
+  variable == "sH" ~ "steelblue",
   variable == "sP" ~ "darkgreen"
 )]
 wt_data[, col := scales::alpha(col, pW*10)]
@@ -159,25 +211,31 @@ plot_wt_dist =
       fill = col
     ),
     width = 0.8,
-    show.legend = F
+    show.legend = T
   )+
   scale_fill_identity()+
-  theme_classic()+
+  theme_classic(
+    base_size = 10
+  )+
   theme(
     strip.background = element_blank(),
     strip.text = element_text(
       face = "italic"
     ),
-    # axis.text = element_blank(),
-    # axis.title = element_blank(),
-    # axis.ticks = element_blank(),
     panel.grid.minor = element_blank()
   )+
-  facet_wrap(~type, scales = "free_y", ncol = 2)+
+  facet_wrap(~type, scales = "free_y", ncol = 2,
+             labeller = labeller(
+               type = c(
+                 "exploit" = "Exploit. comp.",
+                 "interf" = "Interf. comp."
+               )
+             )
+  )+
   coord_cartesian(ylim = c(-1, 1))+
   labs(
     x = "Movement weight",
-    y = "Weight value"
+    y = "Scaled weight value"
   )
 ```
 
@@ -192,6 +250,10 @@ fig_id_var =
     plot_wt_dist,
     ncol = 2,
     design = "AAB\nAAC"
+  ) +
+  plot_annotation(tag_levels = "A") &
+  theme(
+    plot.tag = element_text(face = "bold")
   )
 
 ggsave(
