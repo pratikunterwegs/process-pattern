@@ -10,8 +10,9 @@
 #'
 get_wt_data <- function(filepath,
                         gen_start = 50,
-                        gen_end = 190,
+                        gen_end = 250,
                         gen_step = 10,
+                        gen_add = 249,
                         n_agents = 100) {
 
   # get filepath of the function sourceME.r
@@ -25,7 +26,7 @@ get_wt_data <- function(filepath,
   source(toSource, local = T)
   
   # get data using the custom generation function
-  tmp_data = lapply(seq(gen_start, gen_end, gen_step), function(g) {
+  tmp_data = lapply(c(seq(gen_start, gen_end, gen_step), gen_add), function(g) {
     
     # generation data
     g_data = generation(g)
