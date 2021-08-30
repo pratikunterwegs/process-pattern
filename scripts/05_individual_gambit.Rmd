@@ -1,0 +1,123 @@
+---
+editor_options: 
+  chunk_output_type: console
+---
+
+# Behavioural Mechanisms as Predictors of Movement Paths
+
+```{r}
+library(data.table)
+library(lme4)
+library(dplyr)
+
+library(ggplot2)
+library(sjPlot)
+```
+
+## Prepare data
+
+```{r}
+paths = list.files(path = "data/lt_tracks", full.names = T)
+
+# read files
+data = lapply(paths, fread)
+# bind data
+data = rbindlist(data)
+```
+
+summarise data over track
+
+```{r}
+# summarise data
+data_summary = data[, list(
+  distance = sum(distance),
+  items = mean(mean_items),
+  agents = mean(mean_agents),
+  cell_r = mean(mean_r)
+), by = c("intake", "growth", "type", "rep_",
+          "id", sprintf("wt_%i", seq(2, 4)))]
+```
+
+```{r}
+fwrite(data_summary, file = "data/data_id_gambit.csv")
+```
+
+## Prepare data for model
+
+### Scale data
+
+weight values should be scaled to compare across replicates and scenarios
+
+### Determine strongest weight
+
+```{r}
+data_summary[, cluster := apply(
+  data_summary[, c("wt_2", "wt_3", "wt_4")], 1, function(x){
+    which.max(abs(x))
+  })
+]
+data_summary[, cluster := case_when(
+  cluster == 1 ~ "Nhnd",
+  cluster == 2 ~ "Hand",
+  cluster == 3 ~ "Prey"
+)]
+```
+
+split data
+
+```{r}
+data_summary = data_summary[, list(
+  model_data = list(.SD)
+), by = c("growth", "type", "rep_")]
+```
+
+## Fit GLM
+
+```{r}
+fit_model = function(df) {
+  
+  glm(distance ~ wt_2 + wt_3 + wt_4 + cell_r + items + agents, data = df)
+  
+}
+```
+
+```{r}
+data_summary[, model := lapply(model_data, fit_model)]
+
+# save model fits
+save(data_summary, file = "data/data_model_fit_id_gambit.Rds")
+```
+
+## Model fits
+
+```{r}
+model_fit[[2]]|> summary()
+```
+
+## Model predictions --- UPDATE, MAY NOT BE NECESSARY
+
+### Get model predictions
+
+```{r}
+data_summary = Map(data_summary, model_fit, f = function(df, m) {
+  mpred = predict.glm(m, newdata = df, type = "response", se.fit = T)
+  df[, c("pred", "se_pred") := list(
+    mpred$fit, mpred$se.fit)
+  ]
+  df
+})
+```
+
+```{r}
+ggplot(data_summary[[1]])+
+  geom_abline(
+    slope = 1
+  )+
+  geom_point(
+    aes(
+      distance, pred,
+      col = cluster
+    )
+  )
+```
+
