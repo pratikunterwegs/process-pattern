@@ -138,7 +138,8 @@ plot_dist_hist =
       "Nhnd" = "indianred1",
       "Hand" = "steelblue"
     ),
-    breaks = c("Prey", "Hand", "Nhnd")
+    breaks = c("Prey", "Hand", "Nhnd"),
+    labels = c("sP", "sH", "sN")
   )+
   facet_wrap(~ type, ncol = 1, scales = "free_x",
              labeller = labeller(
@@ -246,10 +247,10 @@ plot_wt_dist =
 fig_id_var =
   wrap_plots(
     plot_move,
-    plot_dist_hist,
     plot_wt_dist,
+    plot_dist_hist,
     ncol = 2,
-    design = "AAB\nAAC"
+    design = "AAABB\nAAACC"
   ) +
   plot_annotation(tag_levels = "A") &
   theme(
