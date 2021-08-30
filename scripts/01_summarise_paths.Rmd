@@ -18,27 +18,82 @@ source("R/fun_steplength_timescale.R")
 source("R/fun_read_config.R")
 ```
 
-## List files and read data
+## Generation data
+
+### Summarise distance and displacement
+
+```{r}
+paths = list.dirs(path = "data", recursive = F)
+paths = paths[grep("sim", paths)]
+
+# read data and summarise distance and displacement
+data = lapply(paths, function(path) {
+  
+  df_ = read_data(path, gen_start = 0, gen_end = 240, gen_add = 249)
+  
+  df_ = df_[, list(paths = list(.SD)), by = c("id", "g")]
+  df_[, c("displacement", "distance") := list(
+    vapply(paths, get_displacement, FUN.VALUE = 1.0),
+    vapply(paths, get_distance, FUN.VALUE = 1L)
+  )]
+  
+  df_[, c("id", "g", "distance", "displacement")]
+})
+```
+
+### Read parameters
+
+```{r}
+params = lapply(paths, read_config)
+
+# add parameters
+data = Map(function(df, p) {
+  df[, names(p) := list(p["growth"], p["type"], p["rep_"])]
+}, data, params)
+```
+
+### Get fitness
+
+```{r}
+# get wt and fitness data
+wt_data = lapply(paths, get_wt_data, gen_start = 0, 
+                 gen_end = 240, gen_add = 249,
+                 n_agents = 100)
+
+data = Map(data, wt_data, f = function(df_, wt_) {
+  merge(df_, wt_, by.x = c("id", "g"), by.y = c("id", "gen"))
+})
+
+# bind and save
+data = rbindlist(data)
+# exclude gen 250
+data = data[g < 250,]
+
+# save
+fwrite(data, file = "data/data_gens_dist_summary.csv")
+```
+
+## Long term movement data 
+
+### List files and read data
 
 needs to be made recursive over dirs.
 
 ```{r}
 paths = list.dirs(path = "data", recursive = F)
 paths = paths[grep("sim", paths)]
-# paths = c("data")
 
 # read data
 data = lapply(paths, read_data, gen_start = 250, gen_end = 250)
 ```
 
-## Read parameters
+### Read parameters
 
 ```{r}
 params = lapply(paths, read_config)
 ```
 
-
-## Get distance and displacement
+### Get distance and displacement
 
 ```{r}
 # split by interval
@@ -59,7 +114,7 @@ data = lapply(data, function(df) {
 })
 ```
 
-## Get cumulative distance and avg speed
+### Get cumulative distance and avg speed
 
 ```{r}
 # # get fit as list col
@@ -83,9 +138,7 @@ data = lapply(data, function(df) {
 # })
 ```
 
-## Fit a neg binom distribution to step lengths
-
-### Fit distribution
+### Fit a neg binom distribution to step lengths
 
 ```{r}
 # data = lapply(data, function(df) {
@@ -118,7 +171,7 @@ data = lapply(data, function(df) {
 
 ```
 
-## Get final data
+### Get final data
 
 ```{r}
 # remove path data
