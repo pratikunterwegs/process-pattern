@@ -16,6 +16,14 @@
 pick_alt_steps = function(x, y, x2, y2, landsize = 512, 
                           chebyshev_distance = 1, n_samples = 8) {
   
+  # which steps to pick
+  which_steps = 0
+  if (chebyshev_distance == 1) {
+     which_steps = seq(8)
+  } else {
+     which_steps = chebyshev_distance * seq(n_samples)
+  }
+
   assertthat::assert_that(
     n_samples <= (chebyshev_distance * 8),
     msg = "pick_alt_steps: more samples asked than available"
@@ -35,7 +43,7 @@ pick_alt_steps = function(x, y, x2, y2, landsize = 512,
   
   # sample n_steps if more than n_samples available
   if (nrow(steps) > n_samples) {
-    steps = steps[sample.int(n = nrow(steps), size = n_samples, replace = F),]
+    steps = steps[which_steps,]
   }
   
   # bind real steps and mark case
@@ -45,13 +53,28 @@ pick_alt_steps = function(x, y, x2, y2, landsize = 512,
   steps
 }
 
+#' Prepare data for SSF.
+#'
+#' @param data The data.table with x, y, time columns.
+#' @param landsize The landscape size, fixed to 512.
+#' @param chebyshev_distance The chebyshev distance.
+#' @param n_samples The number of sampled, fixed to 8. Other values are not
+#' supported.
+#'
+#' @return A data.table with selected and alternative steps.
+#' @export
 prep_path_ssf = function(data, landsize = 512,
                          chebyshev_distance = 1, n_samples = 8) {
+  
+  assertthat::assert_that(
+    n_samples == 8,
+    msg = "prep_ssf: only 8 samples supported"
+  )
+  # set order by time
+  setorder(data, t)
   # get x2 y2
-  data[, `:=`(
-    x2 = data.table::shift(x, type = "lead"),
-    y2 = data.table::shift(y, type = "lead")
-  )]
+  data$x2 = data.table::shift(data$x, type = "lead")
+  data$y2 = data.table::shift(data$y, type = "lead")
   # remove last as no known end
   data = data[complete.cases(data),]
   
@@ -62,7 +85,8 @@ prep_path_ssf = function(data, landsize = 512,
   
   # assign step id
   alt_steps = Map(function(df, sid_) {
-    df[, step_id_ := sid_]
+    df$step_id_ = sid_
+    df
   }, alt_steps, seq_len(length(alt_steps)))
   
   # bind list and return
