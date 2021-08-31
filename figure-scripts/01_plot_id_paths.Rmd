@@ -18,7 +18,8 @@ source("R/fun_wt_vals.R")
 ## Figures for movement paths
 
 ```{r}
-data = fread("data/data_lt_plot.csv")[growth == 0.01,]
+data = fread("data/data_lt_plot.csv")[growth %in% c(0.01, 0.03) & 
+                                        interval %in% c(3000, 6000),]
 ```
 
 ```{r}
@@ -27,10 +28,10 @@ data = split(data, by = c("type"))
 
 ```{r}
 label_interval = c(
-  "1000" = "T:   500 - 1,500",
+  # "1000" = "T:   500 - 1,500",
   "3000" = "T: 2,500 - 3,500",
-  "6000" = "T: 5,500 - 6,500",
-  "8000" = "T: 7,500 - 8,500"
+  "6000" = "T: 5,500 - 6,500"
+  # "8000" = "T: 7,500 - 8,500"
 )
 
 make_id_plots = function(df, type) {
@@ -50,14 +51,16 @@ make_id_plots = function(df, type) {
     show.legend = F
   )+
   scale_color_discrete_sequential(
-    palette = "Hawaii"
+    palette = "Batlow"
   )+
-  facet_wrap(
-    ~interval,
-    ncol = 2,
+  facet_grid(
+    growth ~ interval,
+    # ncol = 2,
     labeller = labeller(
-      interval = label_interval
-    )
+      interval = label_interval,
+      growth = label_both
+    ),
+    switch = "y"
   )+
   coord_cartesian(
     xlim = c(-70, 70),
@@ -67,7 +70,11 @@ make_id_plots = function(df, type) {
   theme_minimal(base_size = 10)+
   theme(
     strip.text = element_text(
-      face = "italic"
+      face = "bold.italic"
+    ),
+    strip.background = element_rect(
+      fill = "grey90",
+      colour = "transparent"
     ),
     # axis.text = element_blank(),
     axis.title = element_blank(),
@@ -157,7 +164,7 @@ plot_dist_hist =
     legend.key.width = unit(1, "mm"),
     strip.background = element_blank(),
     strip.text = element_text(
-      face = "italic"
+      face = "bold.italic"
     ),
     # axis.text = element_blank(),
     # axis.title = element_blank(),
@@ -221,7 +228,7 @@ plot_wt_dist =
   theme(
     strip.background = element_blank(),
     strip.text = element_text(
-      face = "italic"
+      face = "bold.italic"
     ),
     panel.grid.minor = element_blank()
   )+
