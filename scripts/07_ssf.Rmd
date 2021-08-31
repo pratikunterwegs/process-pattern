@@ -1,0 +1,101 @@
+---
+editor_options: 
+  chunk_output_type: console
+---
+
+# Estimating movement preferences using Step Selection Analysis
+
+```{r}
+library(data.table)
+library(glue)
+library(dplyr)
+library(amt)
+
+library(ggplot2)
+```
+
+```{r}
+source("R/fun_read_config.R")
+source("R/fun_dist_disp.R")
+source("R/fun_link_landscape.R")
+source("R/fun_custom_ssf_steps.R")
+```
+
+## Prepare data
+
+### Read paths
+
+```{r}
+paths = list.dirs(path = "data", recursive = F)
+paths = paths[grep("sim", paths)]
+```
+
+```{r}
+for (path in paths) {
+  
+  # which data to read
+  lt_data = glue("{path}/00250_pos.csv")
+  data = fread(lt_data)
+  
+  param = read_config(path)
+
+  # round tstep to nearest 1000
+  data[, interval := round(t, -3)]
+  
+  # thin data to every fifth step
+  data = data[t %% 5 == 0 & id == 1,]
+  
+  # nest by id and params
+  data = data[, list(
+    steps = list(.SD)
+  ), by = c("id", "interval")]
+  
+  # selec SSF paths
+  data[, steps := lapply(steps, prep_path_ssf, chebyshev_distance = 5,
+                         n_samples = 8)]
+  
+  # bind list
+  data = data[, unlist(steps, recursive = F), by = c("id", "interval")]
+  
+  # set x and y names for linking env
+  setnames(data, old = c("x_", "y_"), new = c("x", "y"))
+  
+  # link environmental data
+  data = split(data, by = "interval")
+  
+  # over list, read and link landscape
+  land_files = list.files(path, pattern = "t0", full.names = T)
+  names(land_files) = names(data)
+  
+  prod = "data/data_parameters/kernels32.png"
+  prod = read_landscape(prod, layer = 1, value_name = "cell_r")
+  
+  # add item and agent data
+  data = Map(
+    function(df, land) {
+      items = read_landscape(land, layer = 4, value_name = "items")
+      agents = read_landscape(land, layer = c(1, 2, 3), value_name = "agents")
+      df = link_landscape(df, items)
+      df = link_landscape(df, agents)
+      df = link_landscape(df, prod)
+    },
+    data, land_files
+  )
+  
+  data = rbindlist(data)
+  
+  # save to file
+  if (!dir.exists("data/ssf_data")) {
+    dir.create("data/ssf_data")
+  } else {
+    data[, names(param) := list(param["growth"], param["type"], param["rep_"])]
+    fwrite(
+      data,
+      glue("data/ssf_data/data_ssf_\\
+           {param['growth']}_{param['type']}_{param['rep_']}.csv")
+    )
+  }
+
+}
+```
+
