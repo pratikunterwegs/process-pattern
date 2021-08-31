@@ -46,7 +46,10 @@ fwrite(data_summary, file = "data/data_id_gambit.csv")
 
 ### Scale data
 
-weight values should be scaled to compare across replicates and scenarios
+```{r}
+# scale the data!
+```
+
 
 ### Determine strongest weight
 

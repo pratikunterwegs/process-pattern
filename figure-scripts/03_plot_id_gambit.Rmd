@@ -1,0 +1,13 @@
+---
+editor_options: 
+  chunk_output_type: console
+---
+
+# Plot results of the individual gambit approach
+
+```{r}
+library(data.table)
+library(ggplot2)
+library(colorspace)
+library(patchwork)
+```

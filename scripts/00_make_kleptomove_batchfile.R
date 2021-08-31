@@ -5,14 +5,14 @@ library(stringr)
 library(tidyr)
 library(dplyr)
 
-runs <- str_pad(seq_len(1), width = 3, pad = "0")
+runs <- str_pad(seq(2, 20), width = 3, pad = "0")
 strategy <- c(
   "exploit",
   "interf",
   "random"
 )
 
-regrowth <- c(0.0033, 0.01, 0.03)
+regrowth <- c(0.001, 0.0033, 0.005, 0.01, 0.02, 0.03)
 
 mask <- "{0,0,0}"
 
