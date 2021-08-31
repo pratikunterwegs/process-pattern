@@ -101,7 +101,7 @@ for (path in paths) {
     data[, names(param) := list(param["growth"], param["type"], param["rep_"])]
     fwrite(
       data,
-      glue("data/lt_tracks/data_lt_{param['growth']}_{param['type']}_{param['rep_']}.csv")
+      glue("data/lt_tracks/data_lt_summary_{param['growth']}_{param['type']}_{param['rep_']}.csv")
     )
   }
 
