@@ -38,8 +38,8 @@ for (path in paths) {
   # round tstep to nearest 1000
   data[, interval := round(t, -3)]
   
-  # thin data to every fifth step
-  data = data[t %% 5 == 0,]
+  # thin data to every tenth step
+  data = data[t %% 10 == 0,]
   
   # nest by id and params
   data = data[, list(
@@ -47,7 +47,7 @@ for (path in paths) {
   ), by = c("id", "interval")]
   
   # selec SSF paths
-  data[, steps := lapply(steps, prep_path_ssf, chebyshev_distance = 5,
+  data[, steps := lapply(steps, prep_path_ssf, chebyshev_distance = 10,
                          n_samples = 8)]
   
   # bind list

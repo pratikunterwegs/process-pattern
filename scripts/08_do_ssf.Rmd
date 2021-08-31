@@ -37,7 +37,7 @@ ssf_fits = lapply(paths, function(file) {
   # extract weights and save
   data[, unlist(ssf_fit, recursive = F),
        by = c("id", "growth", "type", "rep_")]
-  
+  rm(ssf_fit); gc()
   data
   
 })
