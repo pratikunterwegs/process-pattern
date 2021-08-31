@@ -1,0 +1,73 @@
+---
+editor_options: 
+  chunk_output_type: console
+---
+
+# Plot repeatability over growth rates
+
+```{r}
+library(data.table)
+library(ggplot2)
+library(colorspace)
+library(patchwork)
+```
+
+```{r}
+# load data
+data = fread("data/data_repeatability.csv")
+```
+
+
+```{r}
+ggplot(data)+
+  geom_pointrange(
+    aes(
+      growth, 
+      rpt_v,
+      ymin = rpt_v - rpt_se,
+      ymax = rpt_v + rpt_se
+    ),
+    alpha = 0.6,
+    shape = 21,
+    fill = "grey"
+    # position = position_dodge(
+    #   width = 0.01
+    # )
+  )+
+  facet_wrap(~ type,
+             ncol = 3,
+             scales = "free_y",
+             labeller = labeller(
+               type = c(
+                 "exploit" = "Exploit. comp.",
+                 "interf" = "Interf. comp.",
+                 "random" = "Random. move"
+               )
+             )
+  )+
+  theme_classic(
+    base_size = 10
+  )+
+  theme(
+    strip.background = element_blank(),
+    strip.text = element_text(
+      face = "bold.italic"
+    ),
+    axis.title.x = ggtext::element_markdown(),
+    panel.grid.major.y = element_line(
+      colour = "grey90",
+      size = 0.1,
+      linetype = 2
+    )
+  )+
+  coord_cartesian(
+    expand = F,
+    xlim = c(0, 0.035),
+    ylim = c(0, 1)
+  )+
+  labs(
+    x = "Landscape productivity *r<sub>max</sub>*",
+    y = "Repeatability (+/- SE)"
+  )
+```
+
