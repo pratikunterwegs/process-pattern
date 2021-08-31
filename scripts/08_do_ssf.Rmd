@@ -1,0 +1,48 @@
+---
+editor_options: 
+  chunk_output_type: console
+---
+
+# Step Selection Analysis
+
+```{r}
+library(data.table)
+library(glue)
+
+library(amt)
+```
+
+```{r}
+paths = list.files(path = "data/ssf_data", full.names = T)
+```
+
+```{r}
+ssf_fits = lapply(paths, function(file) {
+  
+  data = fread(file)
+  
+  data = data[, list(
+    steps = list(.SD)
+  ), by = c("id", "growth", "type", "rep_")]
+  
+  ssf_fit = lapply(data$steps, function(df) {
+    amt::fit_ssf(
+      data = df,
+      formula = case_ ~ items + agents + cell_r + strata(step_id_)
+    )
+  })
+  
+  data[, ssf_fit := lapply(ssf_fit, function(ssf_fit) broom::tidy(ssf_fit$model))]
+  
+  # extract weights and save
+  data[, unlist(ssf_fit, recursive = F),
+       by = c("id", "growth", "type", "rep_")]
+  
+  data
+  
+})
+
+# save
+save(ssf_fits, file = "data/data_ssf_fits.Rds")
+```
+
