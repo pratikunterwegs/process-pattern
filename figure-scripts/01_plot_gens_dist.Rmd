@@ -31,19 +31,8 @@ data_int_summary = data[, list(
 ```
 
 ```{r}
-plot_intake_gen = 
+plot_intake_gen =
   ggplot(data_int_summary[growth == 0.01 & type != "random"])+
-  geom_bin2d(
-    data = data[growth == 0.01 & type != "random"],
-    aes(
-      g, intake
-    ),
-    binwidth = c(10, 1)
-  )+
-  geom_path(
-    aes(g, mean_int,
-        group = rep_)
-  )+
   geom_ribbon(
     aes(g, 
         ymin = mean_int - sd_int,
@@ -51,14 +40,13 @@ plot_intake_gen =
         group = rep_
     ),
     fill = "transparent",
-    col = "grey40",
-    lty = 2
+    col = "grey90",
+    size = 0.1
   )+
-  scale_fill_continuous_sequential(
-    palette = "Greens 2",
-    rev = T,
-    limits = c(NA, 25),
-    na.value = "darkgreen"
+  geom_path(
+    aes(g, mean_int,
+        group = rep_),
+    col = "darkgreen"
   )+
   facet_wrap(~type, scales = "free_y",
              labeller = labeller(
@@ -78,15 +66,12 @@ plot_intake_gen =
     strip.text = element_text(
       face = "italic"
     ),
-    # axis.text = element_blank(),
-    # axis.title = element_blank(),
-    # axis.ticks = element_blank(),
     panel.grid.minor = element_blank()
   )+
   coord_cartesian(
     expand = F,
     # xlim = c(0, 260),
-    # ylim = c(0, 400)
+    ylim = c(0, 50)
   )+
   labs(
     y = "Intake",
@@ -105,19 +90,8 @@ data_dist_summary = data[, list(
 ```
 
 ```{r}
-plot_dist_gen = 
+plot_dist_gen =
   ggplot(data_dist_summary[growth == 0.01 & type != "random"])+
-  geom_bin2d(
-    data = data[growth == 0.01 & type != "random"],
-    aes(
-      g, distance
-    ),
-    binwidth = c(10, 5)
-  )+
-  geom_path(
-    aes(g, mean_dist,
-        group = rep_)
-  )+
   geom_ribbon(
     aes(g, 
         ymin = mean_dist - sd_dist,
@@ -125,14 +99,13 @@ plot_dist_gen =
         group = rep_
     ),
     fill = "transparent",
-    col = "grey40",
-    lty = 2
+    col = "grey90",
+    size = 0.1
   )+
-  scale_fill_continuous_sequential(
-    palette = "Blues 2",
-    rev = T,
-    limits = c(NA, 25),
-    na.value = "darkblue"
+  geom_path(
+    aes(g, mean_dist,
+        group = rep_),
+    col = "steelblue"
   )+
   facet_wrap(~type, scales = "free_y",
              labeller = labeller(
@@ -155,7 +128,8 @@ plot_dist_gen =
     panel.grid.minor = element_blank()
   )+
   coord_cartesian(
-    expand = F
+    expand = F,
+    ylim = c(0, 350)
   )+
   labs(
     y = "Distance",
@@ -177,14 +151,14 @@ data_wt_count = data_wt_count[, list(pW = .N / 100),
               by = c("growth", "g", "type", "rep_", "variable", "value")]
 
 # rename weights
-data_wt_count[, variable := case_when(
+data_wt_count[, variable := dplyr::case_when(
   variable == "wt_2" ~ "sN",
   variable == "wt_3" ~ "sH",
   variable == "wt_4" ~ "sP"
 )]
 
 # subset for index case
-data_wt_count = data_wt_count[growth == 0.01 & type != "random" & rep_ == 1, ]
+data_wt_count = data_wt_count[growth == 0.01 & type != "random" & rep_ < 4, ]
 
 data_wt_count = split(data_wt_count, by = "type")
 ```
@@ -202,7 +176,7 @@ plot_wt_evo = function(df) {
     width = 10
   )+
   scale_fill_viridis_c(
-    option = "F", direction = -1,
+    option = "A", direction = -1,
     limits = c(0.02, 1),
     na.value = "transparent",
     label = scales::percent
@@ -210,7 +184,12 @@ plot_wt_evo = function(df) {
   scale_y_continuous(
     trans = ggallin::ssqrt_trans
   )+
-  facet_wrap(~variable, scales = "free_y")+
+  facet_grid(
+    rep_~variable, scales = "free_y",
+    labeller = labeller(
+      rep_ = label_both
+    )
+  )+
   theme_classic(
     base_size = 10
   )+
@@ -218,10 +197,16 @@ plot_wt_evo = function(df) {
     legend.position = "top",
     legend.text = element_text(size = 8),
     legend.title = element_text(size = 8),
-    legend.key.height = unit(2, "mm"),
+    legend.key.height = unit(1, "mm"),
+    # legend.key.height = unit(2, "mm"),
     strip.background = element_blank(),
     strip.text = element_text(
       face = "italic"
+    ),
+    panel.border = element_rect(
+      colour = "grey",
+      fill = NA,
+      size = 0.1
     )
   )+
   coord_cartesian(
@@ -249,7 +234,8 @@ fig_evo_dyn =
       plot_dist_gen,
       plots_wt_evo[["exploit"]],
       plots_wt_evo[["interf"]]
-    )
+    ),
+    design = "AB\nAB\nCD\nCD\nCD"
   ) +
   plot_annotation(
     tag_levels = "A"
@@ -262,7 +248,7 @@ fig_evo_dyn =
 ggsave(
   fig_evo_dyn,
   filename = "figures/fig_evo_dyn.png",
-  height = 6, width = 6.5
+  height = 6.5, width = 6.5
 )
 ```
 
