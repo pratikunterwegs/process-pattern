@@ -19,21 +19,30 @@ data = fread("data/data_repeatability.csv")
 
 
 ```{r}
-ggplot(data)+
+plot_repeatability = 
+  ggplot(data)+
   geom_pointrange(
     aes(
       growth, 
       rpt_v,
       ymin = rpt_v - rpt_se,
-      ymax = rpt_v + rpt_se
+      ymax = rpt_v + rpt_se,
+      fill = growth
     ),
-    alpha = 0.6,
+    alpha = 0.9,
     shape = 21,
-    fill = "grey"
-    # position = position_dodge(
-    #   width = 0.01
-    # )
+    position = position_jitter(
+      width = 0.01
+    ),
+    show.legend = F
   )+
+  scale_fill_viridis_c(
+    option = "D",
+    trans = "log10",
+    begin = 0.1,
+    end = 1
+  )+
+  scale_x_log10()+
   facet_wrap(~ type,
              ncol = 3,
              scales = "free_y",
@@ -51,23 +60,30 @@ ggplot(data)+
   theme(
     strip.background = element_blank(),
     strip.text = element_text(
-      face = "bold.italic"
+      face = "italic"
     ),
     axis.title.x = ggtext::element_markdown(),
     panel.grid.major.y = element_line(
-      colour = "grey90",
-      size = 0.1,
+      colour = "grey",
+      # size = 0.4,
       linetype = 2
     )
   )+
   coord_cartesian(
     expand = F,
-    xlim = c(0, 0.035),
+    xlim = c(0.9 * 1e-3, 0.035),
     ylim = c(0, 1)
   )+
   labs(
     x = "Landscape productivity *r<sub>max</sub>*",
     y = "Repeatability (+/- SE)"
   )
+
+# save figure
+ggsave(
+  plot_repeatability,
+  filename = "figures/fig_repeatability.png",
+  height = 3, width = 5
+)
 ```
 
