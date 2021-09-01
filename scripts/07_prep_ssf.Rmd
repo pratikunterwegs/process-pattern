@@ -29,6 +29,10 @@ paths = paths[grep("sim", paths)]
 ```{r}
 for (path in paths) {
   
+  message(
+    glue("processing {path}")
+  )
+  
   # which data to read
   lt_data = glue("{path}/00250_pos.csv")
   data = fread(lt_data)
@@ -93,6 +97,8 @@ for (path in paths) {
            {param['growth']}_{param['type']}_{param['rep_']}.csv")
     )
   }
+  
+  rm(data)
 
 }
 ```
