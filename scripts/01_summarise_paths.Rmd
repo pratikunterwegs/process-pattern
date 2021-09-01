@@ -16,6 +16,7 @@ source("R/fun_dist_disp.R")
 source("R/fun_read_pos.R")
 source("R/fun_steplength_timescale.R")
 source("R/fun_read_config.R")
+source("R/fun_wt_vals.R")
 ```
 
 ## Generation data
@@ -83,51 +84,27 @@ needs to be made recursive over dirs.
 paths = list.dirs(path = "data", recursive = F)
 paths = paths[grep("sim", paths)]
 
-# read data
-data = lapply(paths, read_data, gen_start = 250, gen_end = 250)
-```
-
-### Read parameters
-
-```{r}
-params = lapply(paths, read_config)
-```
-
-### Get distance and displacement
-
-```{r}
-# split by interval
-data = lapply(data, function(df) {
+# loop over paths
+for (path in paths) {
+  df = read_data(path = path, gen_start = 250, gen_end = 250, gen_add = NULL)
+  params = read_config(path)
+  
+  # round to interval
   df[, interval := round(t, digits = -3)]
-  df
-})
-
-# get distance and displacement
-data = lapply(data, function(df) {
+  # nest by interval and id
   df = df[, list(paths = list(.SD)), by = c("id", "interval")]
+  # get distance and displacement
   df[, c("displacement", "distance") := list(
     vapply(paths, get_displacement, FUN.VALUE = 1.0),
     vapply(paths, get_distance, FUN.VALUE = 1L)
   )]
+  # add params
+  df[, names(params) := list(params["growth"], params["type"], params["rep_"])]
+  # remove path data
+  df$paths = NULL
   
-  df
-})
-```
-
-### Get final data
-
-```{r}
-# add parameters
-data = Map(function(df, p) {
-  df[, names(p) := list(p["growth"], p["type"], p["rep_"])]
-}, data, params)
-
-# bind list
-data = rbindlist(data)
-
-# remove path data
-data$paths = NULL
-
-# save data
-fwrite(data, file = "data/data_lt_path_summaries.csv")
+  # save data
+  fwrite(df, file = glue("data/lt_tracks/lt_track_summary_{params['type']}_\\
+         {params['growth']}_{params['rep_']}"))
+}
 ```
