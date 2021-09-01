@@ -28,14 +28,17 @@ ssf_fits = lapply(paths, function(file) {
   ssf_fit = lapply(data$steps, function(df) {
     amt::fit_ssf(
       data = df,
-      formula = case_ ~ items + agents + cell_r + strata(step_id_)
+      formula = case_ ~ items + handlers + nonhand + cell_r + strata(step_id_)
     )
   })
   
-  data[, ssf_fit := lapply(ssf_fit, function(ssf_fit) broom::tidy(ssf_fit$model))]
-  
+  data[, ssf_fit := lapply(ssf_fit, function(ssf_fit){
+    broom::tidy(ssf_fit$model)
+  })
+  ]
+  data[, steps := NULL]
   # extract weights and save
-  data[, unlist(ssf_fit, recursive = F),
+  data = data[, unlist(ssf_fit, recursive = F),
        by = c("id", "growth", "type", "rep_")]
   rm(ssf_fit); gc()
   data
