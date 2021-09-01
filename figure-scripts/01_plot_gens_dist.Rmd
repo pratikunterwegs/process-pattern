@@ -176,7 +176,7 @@ plot_wt_evo = function(df) {
     width = 10
   )+
   scale_fill_viridis_c(
-    option = "A", direction = -1,
+    option = "D", direction = -1,
     limits = c(0.02, 1),
     na.value = "transparent",
     label = scales::percent
