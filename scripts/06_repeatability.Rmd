@@ -10,9 +10,6 @@ library(dplyr)
 
 library(lme4)
 library(rptR)
-
-library(ggplot2)
-library(sjPlot)
 ```
 
 ## Prepare data
