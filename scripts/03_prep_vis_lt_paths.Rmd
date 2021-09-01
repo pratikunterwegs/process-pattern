@@ -29,46 +29,22 @@ needs to be made recursive over dirs.
 ```{r}
 paths = list.dirs(path = "data", recursive = F)
 paths = paths[grep("sim", paths)]
-# paths = c("data")
 
-# read data
-data = lapply(paths, read_data, gen_start = 250, gen_end = 250)
+# select reps 002
+paths = paths[grep("rep_002", paths)]
 ```
 
 ## Read parameters
 
 ```{r}
 params = lapply(paths, read_config)
-rm(paths)
-```
-
-
-## Get distance and displacement
-
-```{r}
-# split by interval
-data = lapply(data, function(df) {
-  df[, interval := round(t, digits = -3)]
-  df
-})
-
-# get distance and displacement
-data = lapply(data, function(df) {
-  df = df[, list(paths = list(.SD)), by = c("id", "interval")]
-  df[, c("displacement", "distance") := list(
-    vapply(paths, get_displacement, FUN.VALUE = 1.0),
-    vapply(paths, get_distance, FUN.VALUE = 1L)
-  )]
-  
-  df
-})
 ```
 
 ## Select individual paths
 
 ```{r}
-data_id = lapply(data, function(df) {
-  df[id < 4]
+data_id = lapply(paths, function(path) {
+  fread(glue("{path}/00250_pos.csv"))[id < 4,]
 })
 
 # link params
@@ -79,25 +55,21 @@ data_id = Map(data_id, params, f = function(df, p) {
 
 # bind
 data_id = rbindlist(data_id)
+data_id[, interval := round(t, -3)]
 
 data_id = data_id[interval %in% c(1000, 3000, 6000, 8000)]
 
+data_id = split(data_id, by = c("id", "interval", "growth", "type", "rep_"))
+
 # transform paths using first point as origin to handle wrapping
-data_id[, paths := lapply(paths, function(df) {
+data_id = lapply(data_id, function(df) {
   df$x_wrap = scale_wrap_coords(df$x) + rnorm(length(df$x), 0, 0.3)
   df$y_wrap = scale_wrap_coords(df$y) + rnorm(length(df$x), 0, 0.3)
   df
-})]
-```
+})
 
-Unnest the path data.
-
-```{r}
-data_id = data_id[, unlist(paths, recursive = F), 
-                  by = c("id", "interval", "growth", "type", "rep_")]
-
-# set order
-setorder(data_id, id, t)
+# bind
+data_id = rbindlist(data_id)
 ```
 
 ```{r}
