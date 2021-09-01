@@ -73,38 +73,3 @@ data = data[g < 250,]
 # save
 fwrite(data, file = "data/data_gens_dist_summary.csv")
 ```
-
-## Long term movement data 
-
-### List files and read data
-
-needs to be made recursive over dirs.
-
-```{r}
-paths = list.dirs(path = "data", recursive = F)
-paths = paths[grep("sim", paths)]
-
-# loop over paths
-for (path in paths) {
-  df = read_data(path = path, gen_start = 250, gen_end = 250, gen_add = NULL)
-  params = read_config(path)
-  
-  # round to interval
-  df[, interval := round(t, digits = -3)]
-  # nest by interval and id
-  df = df[, list(paths = list(.SD)), by = c("id", "interval")]
-  # get distance and displacement
-  df[, c("displacement", "distance") := list(
-    vapply(paths, get_displacement, FUN.VALUE = 1.0),
-    vapply(paths, get_distance, FUN.VALUE = 1L)
-  )]
-  # add params
-  df[, names(params) := list(params["growth"], params["type"], params["rep_"])]
-  # remove path data
-  df$paths = NULL
-  
-  # save data
-  fwrite(df, file = glue("data/lt_tracks/lt_track_summary_{params['type']}_\\
-         {params['growth']}_{params['rep_']}"))
-}
-```
