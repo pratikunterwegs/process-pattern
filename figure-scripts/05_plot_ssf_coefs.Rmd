@@ -1,0 +1,144 @@
+---
+editor_options: 
+  chunk_output_type: console
+---
+
+# Plot SSF coefficients _vs_ agent weights
+
+```{r}
+library(data.table)
+library(ggplot2)
+library(colorspace)
+library(patchwork)
+
+# cut wt fun
+source("R/fun_wt_vals.R")
+```
+
+## Read data
+
+```{r}
+paths = list.files("data/ssf_fits", full.names = T)
+data = lapply(paths, fread)
+
+data = rbindlist(data)
+```
+
+## Read agent weights
+
+```{r}
+wt_data = fread("data/data_lt_wt_gens.csv")
+wt_data = wt_data[, c("id", "growth", "type", "rep_", 
+                      sprintf("wt_%i", c(2, 3, 4)))]
+
+setnames(wt_data, old = c("wt_2", "wt_3", "wt_4"), 
+         new = c("sN", "sH", "sP"))
+
+# melt
+wt_data = melt(wt_data, id.vars = c("id", "growth", "type", "rep_"), 
+     variable.name = "weight", value.name = "wt_val")
+```
+
+## Link coefficients and weights
+
+```{r}
+# select only significant predictors
+data = data[p.value <= 0.05, !(c("std.error", "statistic"))]
+data = data[, !("p.value")]
+
+# set names
+data[, term := dplyr::case_when(
+  term == "handlers" ~ "sH",
+  term == "nonhand" ~ "sN",
+  term == "items" ~ "sP",
+  term == "cell_r" ~ "sR"
+)]
+setnames(data, "estimate", "ssf_coef")
+
+# link weights
+data = merge(data, wt_data, 
+             by.x = c("id", "growth", "rep_", "type", "term"), 
+             by.y = c("id", "growth", "rep_", "type", "weight"))
+
+# scale weights and selection coefficients
+data[, wt_val := cut_wt_lower(wt_val)]
+data[, ssf_coef := tanh(ssf_coef)]
+```
+
+## Check for signs
+
+```{r}
+data_pref_sign = data[, list(
+  match_sign = sum(sign(ssf_coef) == sign(wt_val)) / length(wt_val)
+), by = c("growth", "rep_", "type", "term")]
+  
+data_pref_sign = split(data_pref_sign, by = "type")
+```
+
+```{r}
+do_plot = function(df) {
+  ggplot(df)+
+  geom_jitter(
+    aes(
+      # factor(growth),
+      growth,
+      match_sign,
+      fill = growth
+    ),
+    width = 0.01, alpha = 0.9,
+    show.legend = F,
+    shape = 21,
+    size = 2
+  )+
+  scale_fill_viridis_c(
+    option = "D",
+    trans = "log10",
+    begin = 0.1,
+    end = 1
+  )+
+  scale_x_log10()+
+  coord_cartesian(
+    # expand = F,
+    xlim = c(0.9 * 1e-3, 0.035),
+    ylim = c(0, 1)
+  )+
+  facet_wrap(~ term, 
+             labeller = labeller(.multi_line = F),
+             scales = "free")+
+  theme_classic(base_size = 10)+
+  theme(
+    axis.title.x = ggtext::element_markdown(),
+    legend.position = "top",
+    legend.text = element_text(size = 8),
+    legend.title = element_text(size = 8),
+    # legend.key.width = unit(1, "mm"),
+    legend.key.height = unit(1, "mm"),
+    strip.background = element_blank(),
+    strip.text = element_text(
+      face = "italic"
+    )
+  )+
+  labs(
+    x = "Landscape productivity *r<sub>max</sub>*",
+    y = "% Agents"
+  )
+}
+```
+
+```{r}
+lapply(data_pref_sign, do_plot) |>
+  wrap_plots(ncol = 1)+
+  plot_annotation(
+    tag_levels = "A"
+  ) &
+  theme(
+    plot.tag = element_text(face = "bold")
+  ) -> plot_ssf_wt_sign
+
+ggsave(
+  plot_ssf_wt_sign,
+  filename = "figures/fig_ssf_wt_sign.png",
+  width = 5, height = 4
+)
+```
+
