@@ -16,8 +16,10 @@ library(amt)
 paths = list.files(path = "data/ssf_data", full.names = T)
 ```
 
+## Run SSF fits
+
 ```{r}
-ssf_fits = lapply(paths, function(file) {
+purrr::walk(paths, function(file) {
   
   data = fread(file)
   
@@ -28,6 +30,7 @@ ssf_fits = lapply(paths, function(file) {
   ssf_fit = lapply(data$steps, function(df) {
     amt::fit_ssf(
       data = df,
+      method = "approximate",
       formula = case_ ~ items + handlers + nonhand + cell_r + strata(step_id_)
     )
   })
@@ -41,11 +44,18 @@ ssf_fits = lapply(paths, function(file) {
   data = data[, unlist(ssf_fit, recursive = F),
        by = c("id", "growth", "type", "rep_")]
   rm(ssf_fit); gc()
-  data
+  
+  message(
+    glue(
+      "ssf fitted: {unique(data$type)} {unique(data$growth)}\\
+        {unique(data$rep_)}"
+    )
+  )
+  
+  fwrite(data,
+         file = glue("data/ssf_fits/ssf_fit_{unique(data$type)}_\\
+         {unique(data$growth)}_{unique(data$rep_)}.csv")
+  )
   
 })
-
-# save
-save(ssf_fits, file = "data/data_ssf_fits.Rds")
 ```
-
