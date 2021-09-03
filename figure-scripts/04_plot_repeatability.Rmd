@@ -19,7 +19,7 @@ data = fread("data/data_repeatability.csv")
 
 
 ```{r}
-plot_repeatability = 
+plot_repeatability =
   ggplot(data)+
   geom_pointrange(
     aes(
