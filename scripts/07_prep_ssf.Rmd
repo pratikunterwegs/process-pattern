@@ -27,6 +27,19 @@ paths = paths[grep("sim", paths)]
 ```
 
 ```{r}
+mean_cue = function(l_land, layer = 4, value_name) {
+  le_ = lapply(l_land, read_landscape, layer = 4, value_name = "variable")
+  le_ = rbindlist(le_)
+  le_ = le_[, list(
+    mean = mean(variable)
+  ), by = c("x", "y")]
+  setnames(le_, "mean", sprintf("mean_%s", value_name))
+  le_
+}
+```
+
+
+```{r}
 for (path in paths) {
   
   message(
@@ -39,29 +52,23 @@ for (path in paths) {
   
   param = read_config(path)
 
-  # round tstep to nearest 1000
-  data[, interval := round(t, -3)]
-  
   # thin data to every tenth step
   data = data[t %% 10 == 0,]
   
   # nest by id and params
   data = data[, list(
     steps = list(.SD)
-  ), by = c("id", "interval")]
+  ), by = c("id")]
   
   # selec SSF paths
   data[, steps := lapply(steps, prep_path_ssf, chebyshev_distance = 10,
                          n_samples = 8)]
   
   # bind list
-  data = data[, unlist(steps, recursive = F), by = c("id", "interval")]
+  data = data[, unlist(steps, recursive = F), by = c("id")]
   
   # set x and y names for linking env
   setnames(data, old = c("x_", "y_"), new = c("x", "y"))
-  
-  # link environmental data
-  data = split(data, by = "interval")
   
   # over list, read and link landscape
   land_files = list.files(path, pattern = "t0", full.names = T)
@@ -70,21 +77,16 @@ for (path in paths) {
   prod = "data/data_parameters/kernels32.png"
   prod = read_landscape(prod, layer = 1, value_name = "cell_r")
   
-  # add item and agent data
-  data = Map(
-    function(df, land) {
-      items = read_landscape(land, layer = 4, value_name = "items")
-      agents_h = read_landscape(land, layer = c(2), value_name = "handlers")
-      agents_nh = read_landscape(land, layer = c(1, 3), value_name = "nonhand")
-      df = link_landscape(df, items)
-      df = link_landscape(df, agents_h)
-      df = link_landscape(df, agents_nh)
-      df = link_landscape(df, prod)
-    },
-    data, land_files
-  )
+  # read mean value
+  items = mean_cue(land_files, layer = 4, value_name = "items")
+  agents_h = mean_cue(land_files, layer = 2, value_name = "handlers")
+  agents_nh = mean_cue(land_files, layer = c(1, 3), value_name = "nonhand")
   
-  data = rbindlist(data)
+  # link all
+  land_data = Reduce(merge, x = list(items, agents_h, agents_nh, prod))
+  
+  # link land to data
+  data = merge(data, land_data, by = c("x", "y"))
   
   # save to file
   if (!dir.exists("data/ssf_data")) {
