@@ -31,7 +31,7 @@ purrr::walk(paths, function(file) {
     amt::fit_ssf(
       data = df,
       method = "approximate",
-      formula = case_ ~ items + handlers + nonhand + cell_r + strata(step_id_)
+      formula = case_ ~ cell_r + strata(step_id_)
     )
   })
   
