@@ -35,8 +35,8 @@ setnames(wt_data, old = c("wt_2", "wt_3", "wt_4"),
          new = c("sN", "sH", "sP"))
 
 # melt
-# wt_data = melt(wt_data, id.vars = c("id", "growth", "type", "rep_"), 
-     # variable.name = "weight", value.name = "wt_val")
+# wt_data = melt(wt_data, id.vars = c("id", "growth", "type", "rep_"),
+#   variable.name = "weight", value.name = "wt_val")
 ```
 
 ## Link coefficients and weights
@@ -44,15 +44,23 @@ setnames(wt_data, old = c("wt_2", "wt_3", "wt_4"),
 ```{r}
 # select only significant predictors
 data = data[p.value <= 0.05, !(c("std.error", "statistic"))]
-# data = data[, !("p.value")]
+data = data[, !("p.value")]
 
-# set names
-setnames(data, "estimate", "sR")
+data[, term := dplyr::case_when(
+  term == "mean_handlers" ~ "ssf_H",
+  term == "mean_nonhand" ~ "ssf_N",
+  term == "mean_items" ~ "ssf_P",
+  term == "cell_r" ~ "ssf_R"
+)]
 
-# edits
-data$term = NULL
+data = dcast(data, id + growth + type + rep_ ~ term, value.var = "estimate")
 
-data = merge(data, wt_data, all.x = T, all.y = F)
+data = merge(data, wt_data, 
+             by.x = c("id", "growth", "rep_", "type"), 
+             by.y = c("id", "growth", "rep_", "type"),
+             all.x = T, all.y = T)
+
+data = data[id < 100,]
 ```
 
 ```{r}
@@ -78,7 +86,7 @@ make_plot =
     ggplot(df[growth %in% c(0.01, 0.0033, 0.03)])+
       geom_jitter(
         aes(
-          cluster, sR,
+          cluster, ssf_P,
           col = cluster
         ),
         size = 0.1,
@@ -86,7 +94,7 @@ make_plot =
         show.legend = F
       )+
       geom_boxplot(
-        aes(cluster, sR),
+        aes(cluster, ssf_P),
         fill = "grey",
         alpha = 0.4,
         show.legend = F,
@@ -134,7 +142,7 @@ make_plot =
       coord_cartesian(
         expand = T,
         xlim = c(1, 3),
-        ylim = c(-1.5, 7.5)
+        # ylim = c(-1.5, 7.5)
       )+
       labs(
         y = "Relative selection strength",
@@ -147,7 +155,8 @@ make_plot =
 ```{r}
 plots = lapply(data, make_plot)
 
-plot_ssf = wrap_plots(plots, ncol = 1)+
+plot_ssf_items =
+wrap_plots(plots, ncol = 1)+
   plot_annotation(
     tag_levels = "A"
   ) &
@@ -156,8 +165,8 @@ plot_ssf = wrap_plots(plots, ncol = 1)+
   )
 
 ggsave(
-  plot_ssf,
-  filename = "figures/fig_ssf.png",
+  plot_ssf_items,
+  filename = "figures/fig_ssf_items.png",
   height = 5, width = 4
 )
 ```

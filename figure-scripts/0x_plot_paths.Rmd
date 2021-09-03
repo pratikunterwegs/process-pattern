@@ -1,0 +1,33 @@
+---
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r}
+library(data.table)
+data = fread("data/data_lt_plot.csv")[
+  growth %in% c(0.01) & id == 1 & type == "exploit",]
+setorder(data, id, rep_, t)
+```
+
+```{r}
+library(ggplot2)
+(ggplot(data)+
+  geom_path(
+    aes(x_wrap, y_wrap,
+        group = interaction(id, interval, rep_, type),
+        col = factor(interval)),
+    show.legend = F
+  )+
+  scale_colour_viridis_d(
+    option = "H",
+    begin = 0.1,
+    end = 0.9
+  )+
+  coord_equal()+
+  theme_void()) |>
+  ggsave(
+    filename = "figures/fig_paths.png"
+  )
+```
+
