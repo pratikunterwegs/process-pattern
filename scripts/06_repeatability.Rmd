@@ -40,8 +40,7 @@ data_scaled[, id := floor(id * 99)]
 
 ```{r}
 get_repeatability = function(df) {
-  rptR::rpt(distance ~ mean_r + mean_items + mean_agents + 
-              (1 | id) + (1 | interval), 
+  rptR::rpt(distance ~ mean_r + (1 | id) + (1 | interval), 
             grname = "id", 
             data = df, 
             datatype = "Gaussian", nboot = 100, npermut = 10)
