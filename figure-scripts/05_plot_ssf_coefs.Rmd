@@ -35,8 +35,8 @@ setnames(wt_data, old = c("wt_2", "wt_3", "wt_4"),
          new = c("sN", "sH", "sP"))
 
 # melt
-wt_data = melt(wt_data, id.vars = c("id", "growth", "type", "rep_"), 
-     variable.name = "weight", value.name = "wt_val")
+# wt_data = melt(wt_data, id.vars = c("id", "growth", "type", "rep_"), 
+     # variable.name = "weight", value.name = "wt_val")
 ```
 
 ## Link coefficients and weights
@@ -44,101 +44,121 @@ wt_data = melt(wt_data, id.vars = c("id", "growth", "type", "rep_"),
 ```{r}
 # select only significant predictors
 data = data[p.value <= 0.05, !(c("std.error", "statistic"))]
-data = data[, !("p.value")]
+# data = data[, !("p.value")]
 
 # set names
-data[, term := dplyr::case_when(
-  term == "handlers" ~ "sH",
-  term == "nonhand" ~ "sN",
-  term == "items" ~ "sP",
-  term == "cell_r" ~ "sR"
+setnames(data, "estimate", "sR")
+
+# edits
+data$term = NULL
+
+data = merge(data, wt_data, all.x = T, all.y = F)
+```
+
+```{r}
+# class agents on wights
+data[, cluster := apply(
+  data[, c("sN", "sH", "sP")], 1, function(x){
+    which.max(abs(x))
+  })
+]
+data[, cluster := dplyr::case_when(
+  cluster == 1 ~ "Nhnd",
+  cluster == 2 ~ "Hand",
+  cluster == 3 ~ "Prey"
 )]
-setnames(data, "estimate", "ssf_coef")
+data[, cluster := factor(cluster, levels = c("Prey", "Hand", "Nhnd"))]
 
-# link weights
-data = merge(data, wt_data, 
-             by.x = c("id", "growth", "rep_", "type", "term"), 
-             by.y = c("id", "growth", "rep_", "type", "weight"))
-
-# scale weights and selection coefficients
-data[, wt_val := cut_wt_lower(wt_val)]
-data[, ssf_coef := tanh(ssf_coef)]
-```
-
-## Check for signs
-
-```{r}
-data_pref_sign = data[, list(
-  match_sign = sum(sign(ssf_coef) == sign(wt_val)) / length(wt_val)
-), by = c("growth", "rep_", "type", "term")]
-  
-data_pref_sign = split(data_pref_sign, by = "type")
+data = split(data, by = "type")
 ```
 
 ```{r}
-do_plot = function(df) {
-  ggplot(df)+
-  geom_jitter(
-    aes(
-      # factor(growth),
-      growth,
-      match_sign,
-      fill = growth
-    ),
-    width = 0.01, alpha = 0.9,
-    show.legend = F,
-    shape = 21,
-    size = 2
-  )+
-  scale_fill_viridis_c(
-    option = "D",
-    trans = "log10",
-    begin = 0.1,
-    end = 1
-  )+
-  scale_x_log10()+
-  coord_cartesian(
-    # expand = F,
-    xlim = c(0.9 * 1e-3, 0.035),
-    ylim = c(0, 1)
-  )+
-  facet_wrap(~ term, 
-             labeller = labeller(.multi_line = F),
-             scales = "free")+
-  theme_classic(base_size = 10)+
-  theme(
-    axis.title.x = ggtext::element_markdown(),
-    legend.position = "top",
-    legend.text = element_text(size = 8),
-    legend.title = element_text(size = 8),
-    # legend.key.width = unit(1, "mm"),
-    legend.key.height = unit(1, "mm"),
-    strip.background = element_blank(),
-    strip.text = element_text(
-      face = "italic"
-    )
-  )+
-  labs(
-    x = "Landscape productivity *r<sub>max</sub>*",
-    y = "% Agents"
-  )
-}
+make_plot = 
+  function(df) {
+    ggplot(df[growth %in% c(0.01, 0.0033, 0.03)])+
+      geom_jitter(
+        aes(
+          cluster, sR,
+          col = cluster
+        ),
+        size = 0.1,
+        alpha = 0.2,
+        show.legend = F
+      )+
+      geom_boxplot(
+        aes(cluster, sR),
+        fill = "grey",
+        alpha = 0.4,
+        show.legend = F,
+        outlier.colour = "grey40",
+        outlier.shape = 1,
+        width = 0.4
+      )+
+      scale_colour_manual(
+        values = c(
+          "Prey" = "darkgreen",
+          "Nhnd" = "indianred1",
+          "Hand" = "steelblue"
+        ),
+        breaks = c("Prey", "Hand", "Nhnd"),
+        labels = c("sP", "sH", "sN")
+      )+
+      scale_x_discrete(
+        breaks = c("Prey", "Hand", "Nhnd")
+      )+
+      facet_wrap(
+        ~growth, 
+        ncol = 3, 
+        scales = "free_y",
+        labeller = labeller(
+          growth = label_both,
+          type = c(
+            "exploit" = "Exploit. comp.",
+            "interf" = "Interf. comp."
+          ),
+          .multi_line = F
+        ), 
+        drop = F
+      )+
+      theme_classic(base_size = 10)+
+      theme(
+        legend.position = "top",
+        legend.text = element_text(size = 8),
+        legend.title = element_text(size = 8),
+        strip.background = element_blank(),
+        strip.text = element_text(
+          face = "italic"
+        ),
+        panel.grid.minor = element_blank()
+      )+
+      coord_cartesian(
+        expand = T,
+        xlim = c(1, 3),
+        ylim = c(-1.5, 7.5)
+      )+
+      labs(
+        y = "Relative selection strength",
+        x = "Strongest weight",
+        fill = "Strongest weight"
+      )
+  }
 ```
 
 ```{r}
-lapply(data_pref_sign, do_plot) |>
-  wrap_plots(ncol = 1)+
+plots = lapply(data, make_plot)
+
+plot_ssf = wrap_plots(plots, ncol = 1)+
   plot_annotation(
     tag_levels = "A"
   ) &
   theme(
     plot.tag = element_text(face = "bold")
-  ) -> plot_ssf_wt_sign
+  )
 
 ggsave(
-  plot_ssf_wt_sign,
-  filename = "figures/fig_ssf_wt_sign.png",
-  width = 5, height = 4
+  plot_ssf,
+  filename = "figures/fig_ssf.png",
+  height = 5, width = 4
 )
 ```
 
