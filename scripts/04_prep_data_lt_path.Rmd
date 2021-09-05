@@ -33,31 +33,33 @@ for (path in paths) {
   param = read_config(path)
 
   # round tstep to nearest 1000
-  data[, interval := round(t, -3)]
+  data[, interval := cumsum(t %% 1000 == 0)]
   
   # link environmental data
-  data = split(data, by = "interval")
+  # data = split(data, by = "interval")
   
   # over list, read and link landscape
-  land_files = list.files(path, pattern = "t0", full.names = T)
-  names(land_files) = names(data)
+  # land_files = list.files(path, pattern = "t0", full.names = T)
+  # names(land_files) = names(data)
   
   prod = "data/data_parameters/kernels32.png"
   prod = read_landscape(prod, layer = 1, value_name = "cell_r")
   
   # add item and agent data
-  data = Map(
-    function(df, land) {
-      items = read_landscape(land, layer = 4, value_name = "items")
-      agents = read_landscape(land, layer = c(1, 2, 3), value_name = "agents")
-      df = link_landscape(df, items)
-      df = link_landscape(df, agents)
-      df = link_landscape(df, prod)
-    },
-    data, land_files
-  )
+  # data = Map(
+  #   function(df, land) {
+  #     # items = read_landscape(land, layer = 4, value_name = "items")
+  #     # agents = read_landscape(land, layer = c(1, 2, 3), value_name = "agents")
+  #     # df = link_landscape(df, items)
+  #     # df = link_landscape(df, agents)
+  #     df = link_landscape(df, prod)
+  #   },
+  #   data, land_files
+  # )
+
+  data = link_landscape(data, prod)
   
-  data = rbindlist(data)
+  # data = rbindlist(data)
   
   data = data[, list(paths = list(.SD)), by = c("id", "interval")]
   data[, c("displacement", "distance") := list(
@@ -66,10 +68,10 @@ for (path in paths) {
   )]
 
   # summarise items, agents, and cell_r
-  data[, c("mean_items", "mean_agents", "mean_r") := lapply(paths, function(df) {
+  data[, c("mean_r") := lapply(paths, function(df) {
     
     # multiple summarise
-    df_ = melt(df[, c("x", "y", "items", "agents", "cell_r")], 
+    df_ = melt(df[, c("x", "y", "cell_r")], 
                id.vars = c("x", "y"))[, list(
                  mean_val = mean(value)
                ), by = "variable"]
@@ -84,7 +86,8 @@ for (path in paths) {
 
   # read weights
   wt_data = get_wt_data(
-    path, gen_start = 250, gen_end = 250, gen_step = 1, n_agents = 100, gen_add = NULL
+    path, gen_start = 250, gen_end = 250, gen_step = 1, 
+    n_agents = 100, gen_add = NULL
   )
   
   # add id
