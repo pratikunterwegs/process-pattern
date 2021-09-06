@@ -47,9 +47,6 @@ data = data[p.value <= 0.05, !(c("std.error", "statistic"))]
 data = data[, !("p.value")]
 
 data[, term := dplyr::case_when(
-  term == "mean_handlers" ~ "ssf_H",
-  term == "mean_nonhand" ~ "ssf_N",
-  term == "mean_items" ~ "ssf_P",
   term == "cell_r" ~ "ssf_R"
 )]
 
@@ -58,7 +55,7 @@ data = dcast(data, id + growth + type + rep_ ~ term, value.var = "estimate")
 data = merge(data, wt_data, 
              by.x = c("id", "growth", "rep_", "type"), 
              by.y = c("id", "growth", "rep_", "type"),
-             all.x = T, all.y = T)
+             all.x = T, all.y = F)
 
 data = data[id < 100,]
 ```
@@ -81,12 +78,79 @@ data = split(data, by = "type")
 ```
 
 ```{r}
-make_plot = 
-  function(df) {
+plots = lapply(data, function(df) {
+  ggplot(df)+
+    geom_hline(
+      yintercept = 0,
+      lty = 2,
+      col = 2
+    )+
+  ggdist::stat_halfeye(
+    aes(factor(growth), ssf_R,
+        fill = growth),
+    col = "grey20",
+    alpha = 0.5,
+    point_colour = NA,
+    .width = 0,
+    adjust = .5,
+    show.legend = F
+  )+
+  geom_jitter(
+    aes(
+      factor(growth), ssf_R
+    ),
+    # col = "grey",
+    alpha = 0.1,
+    shape = 1,
+    size = 0.2,
+    width = 0.03
+  )+
+  geom_boxplot(
+    aes(
+      factor(growth), ssf_R
+    ),
+    width = .15, 
+    outlier.shape = NA,
+    position = position_dodge()
+  ) +
+  scale_fill_continuous_sequential(
+    palette = "Terrain 2"
+  )+
+  # facet_wrap(~ type, scales = "free_y")+
+  coord_flip()+
+  theme_classic(
+    base_size = 10
+  )+
+  theme(
+    axis.title.x = ggtext::element_markdown(),
+    axis.title.y = ggtext::element_markdown(),
+    axis.text.y = element_text(
+      angle = 90,
+      hjust = 0.5
+    ),
+    legend.position = "top",
+    legend.key.height = unit(2, "mm")
+  )+
+  labs(
+    y = "Relative selection for <i>r<i>",
+    x = "Landscape productivity *r<sub>max</sub>*"
+  )
+})
+```
+
+```{r}
+wrap_plots(
+  plots
+) +
+```
+
+
+```{r}
+plot_cluster = lapply(data, function(df) {
     ggplot(df[growth %in% c(0.01, 0.0033, 0.03)])+
       geom_jitter(
         aes(
-          cluster, ssf_P,
+          cluster, ssf_R,
           col = cluster
         ),
         size = 0.1,
@@ -94,7 +158,7 @@ make_plot =
         show.legend = F
       )+
       geom_boxplot(
-        aes(cluster, ssf_P),
+        aes(cluster, ssf_R),
         fill = "grey",
         alpha = 0.4,
         show.legend = F,
@@ -112,7 +176,8 @@ make_plot =
         labels = c("sP", "sH", "sN")
       )+
       scale_x_discrete(
-        breaks = c("Prey", "Hand", "Nhnd")
+        breaks = c("Prey", "Hand", "Nhnd"),
+        labels = c("sP", "sH", "sN")
       )+
       facet_wrap(
         ~growth, 
@@ -120,10 +185,6 @@ make_plot =
         scales = "free_y",
         labeller = labeller(
           growth = label_both,
-          type = c(
-            "exploit" = "Exploit. comp.",
-            "interf" = "Interf. comp."
-          ),
           .multi_line = F
         ), 
         drop = F
@@ -135,39 +196,47 @@ make_plot =
         legend.title = element_text(size = 8),
         strip.background = element_blank(),
         strip.text = element_text(
-          face = "italic"
+          face = "italic",
+          size = 6
         ),
-        panel.grid.minor = element_blank()
+        panel.grid.minor = element_blank(),
+        axis.title.y = ggtext::element_markdown()
       )+
       coord_cartesian(
         expand = T,
         xlim = c(1, 3),
-        # ylim = c(-1.5, 7.5)
+        ylim = c(-1, 8)
       )+
       labs(
-        y = "Relative selection strength",
+        y = "Relative selection for *r*",
         x = "Strongest weight",
         fill = "Strongest weight"
       )
-  }
+  })
 ```
 
 ```{r}
-plots = lapply(data, make_plot)
-
-plot_ssf_items =
-wrap_plots(plots, ncol = 1)+
+fig_ssf = 
+  wrap_plots(
+  append(
+    plots,
+    plot_cluster
+  )
+) +
   plot_annotation(
     tag_levels = "A"
   ) &
   theme(
-    plot.tag = element_text(face = "bold")
+    plot.tag = element_text(
+      face = "bold"
+    )
   )
 
 ggsave(
-  plot_ssf_items,
-  filename = "figures/fig_ssf_items.png",
-  height = 5, width = 4
+  fig_ssf,
+  filename = "figures/fig_ssf.png",
+  width = 6,
+  height = 6
 )
 ```
 
