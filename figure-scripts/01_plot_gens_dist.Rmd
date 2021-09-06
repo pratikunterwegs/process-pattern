@@ -27,26 +27,44 @@ data = fread("data/data_gens_dist_summary.csv")
 data_int_summary = data[, list(
   mean_int = mean(intake),
   sd_int = sd(intake)
-), by = c("type", "growth", "g", "rep_")]
+), by = c("type", "growth", "g")]
 ```
 
 ```{r}
 plot_intake_gen =
-  ggplot(data_int_summary[growth == 0.01 & type != "random"])+
-  geom_ribbon(
-    aes(g, 
-        ymin = mean_int - sd_int,
-        ymax = mean_int + sd_int,
-        group = rep_
+  ggplot(data[growth == 0.01 & type != "random"])+
+  # geom_ribbon(
+  #   aes(g, 
+  #       ymin = mean_int - sd_int,
+  #       ymax = mean_int + sd_int,
+  #       group = rep_
+  #   ),
+  #   fill = "transparent",
+  #   col = "grey90",
+  #   size = 0.1
+  # )+
+  
+  geom_bin2d(
+    aes(
+      g, intake,
+      group = rep_,
+      fill = ..count../100
     ),
-    fill = "transparent",
-    col = "grey90",
-    size = 0.1
+    binwidth = c(10, 1)
   )+
-  geom_path(
+  geom_pointrange(
+    data = data_int_summary[growth == 0.01],
     aes(g, mean_int,
-        group = rep_),
-    col = "darkgreen"
+        ymin = mean_int - sd_int,
+        ymax = mean_int + sd_int),
+    col = "indianred",
+    shape = 1, size = 0.1
+  )+
+  scale_fill_continuous_sequential(
+    palette = "Greens 2",
+    trans = "log10",
+    labels = scales::percent,
+    breaks = c(0.03, 0.1, 0.33)
   )+
   facet_wrap(~type, scales = "free_y",
              labeller = labeller(
@@ -70,13 +88,13 @@ plot_intake_gen =
   )+
   coord_cartesian(
     expand = F,
-    # xlim = c(0, 260),
+    xlim = c(-10, 260),
     ylim = c(0, 50)
   )+
   labs(
     y = "Intake",
     x = "Generation",
-    fill = "# Agents"
+    fill = "% Agents"
   )
 ```
 
@@ -86,26 +104,42 @@ plot_intake_gen =
 data_dist_summary = data[, list(
   mean_dist = mean(distance),
   sd_dist = sd(distance)
-), by = c("type", "growth", "g", "rep_")]
+), by = c("type", "growth", "g")]
 ```
 
 ```{r}
 plot_dist_gen =
-  ggplot(data_dist_summary[growth == 0.01 & type != "random"])+
-  geom_ribbon(
-    aes(g, 
-        ymin = mean_dist - sd_dist,
-        ymax = mean_dist + sd_dist,
-        group = rep_
+  ggplot(data[growth == 0.01 & type != "random"])+
+  # geom_ribbon(
+  #   aes(g, 
+  #       
+  #       group = rep_
+  #   ),
+  #   fill = "transparent",
+  #   col = "grey90",
+  #   size = 0.1
+  # )+
+  geom_bin2d(
+    aes(
+      g, distance,
+      group = rep_,
+      fill = ..count../100
     ),
-    fill = "transparent",
-    col = "grey90",
-    size = 0.1
+    binwidth = c(10, 5)
   )+
-  geom_path(
+  geom_pointrange(
+    data = data_dist_summary[growth == 0.01],
     aes(g, mean_dist,
-        group = rep_),
-    col = "steelblue"
+        ymin = mean_dist - sd_dist,
+        ymax = mean_dist + sd_dist),
+    col = "indianred", shape = 1, size = 0.1
+  )+
+  scale_fill_continuous_sequential(
+    palette = "Blues 3",
+    rev = T,
+    trans = "log10",
+    labels = scales::percent,
+    breaks = c(0.03, 0.1, 0.25)
   )+
   facet_wrap(~type, scales = "free_y",
              labeller = labeller(
@@ -129,6 +163,7 @@ plot_dist_gen =
   )+
   coord_cartesian(
     expand = F,
+    xlim = c(-10, 260),
     ylim = c(0, 350)
   )+
   labs(
@@ -176,7 +211,7 @@ plot_wt_evo = function(df) {
     width = 10
   )+
   scale_fill_viridis_c(
-    option = "D", direction = -1,
+    option = "A", direction = -1,
     limits = c(0.02, 1),
     na.value = "transparent",
     label = scales::percent
