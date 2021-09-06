@@ -63,6 +63,12 @@ data_summary[, sprintf("wt_%i", seq(2, 4)) := lapply(
 ), .SDcols = sprintf("wt_%i", seq(2, 4)),
 by = c("interval", "growth", "type", "rep_", "cluster")]
 
+# scale between 0 and 1
+data_summary[, sprintf("wt_%i", seq(2, 4)) := lapply(
+  .SD, scales::rescale
+), .SDcols = sprintf("wt_%i", seq(2, 4)),
+by = c("interval", "growth", "type", "rep_", "cluster")]
+
 # scale the mean_distance and mean_r
 data_summary[, c("mean_distance", "mean_r") := 
                lapply(.SD, scales::rescale), 

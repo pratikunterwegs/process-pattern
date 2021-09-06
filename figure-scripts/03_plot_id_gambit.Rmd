@@ -91,7 +91,7 @@ plots = lapply(data, function(df) {
 ```
 
 ```{r}
-fig_id_gambit = 
+fig_id_gambit =
   wrap_plots(
   plots, ncol = 1
 ) +
