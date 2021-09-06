@@ -13,47 +13,136 @@ library(patchwork)
 ```
 
 ```{r}
+source("R/fun_wt_vals.R")
+```
+
+## Load repeatability
+
+```{r}
 # load data
 data = fread("data/data_repeatability.csv")
 ```
 
+## Load weight data
 
 ```{r}
-plot_repeatability =
-  ggplot(data)+
-  geom_pointrange(
+wt_data = fread("data/data_lt_wt_gens.csv")
+wt_data = wt_data[, c("id", "growth", "type", "rep_", 
+                      sprintf("wt_%i", c(2, 3, 4)))]
+
+setnames(wt_data, old = c("wt_2", "wt_3", "wt_4"), 
+         new = c("sN", "sH", "sP"))
+wt_data = melt(wt_data, id.vars = c("id", "growth", "type", "rep_"))
+
+# subset for some growth and replicates
+wt_data = wt_data[rep_ == 1 & growth %in% c(0.0033, 0.03)]
+
+# scale wts
+wt_data[, value := cut_wt_lower(value, steps = 100, scale = 20)]
+
+wt_data = wt_data[, list(pW = .N / 100), 
+                  by = c("growth", "type", "rep_", "variable", "value")]
+wt_data[, col := dplyr::case_when(
+  variable == "sN" ~ "darkred",
+  variable == "sH" ~ "steelblue",
+  variable == "sP" ~ "darkgreen"
+)]
+wt_data[, col := scales::alpha(col, pW)]
+```
+
+## Plot repeatability
+
+```{r}
+data = split(data, by = "type")
+
+rpt_plots = lapply(data, function(df) {
+  ggplot(df)+
+    geom_vline(
+      xintercept = c(0.0033, 0.03),
+      col = 2,
+      lty = 2
+    )+
+    geom_pointrange(
+      aes(
+        growth, 
+        rpt_v,
+        ymin = rpt_v - rpt_se,
+        ymax = rpt_v + rpt_se,
+        fill = growth
+      ),
+      alpha = 0.9,
+      shape = 21,
+      position = position_jitter(
+        width = 0.01
+      ),
+      show.legend = F
+    )+
+    scale_fill_continuous_qualitative(
+      palette = "Harmonic",
+      trans = "log10",
+      # begin = 0.1,
+      end = 1
+    )+
+    scale_x_log10()+
+    # facet_wrap(~ type,
+    #            ncol = 3,
+    #            scales = "free_y",
+    #            labeller = labeller(
+    #              type = c(
+    #                "exploit" = "Exploit. comp.",
+    #                "interf" = "Interf. comp.",
+    #                "random" = "Random. move"
+    #              )
+    #            )
+    # )+
+    theme_classic(
+      base_size = 10
+    )+
+    theme(
+      strip.background = element_blank(),
+      strip.text = element_text(
+        face = "italic"
+      ),
+      axis.title.x = ggtext::element_markdown(),
+      panel.grid.major.y = element_line(
+        colour = "grey",
+        # size = 0.4,
+        linetype = 2
+      )
+    )+
+    coord_cartesian(
+      expand = F,
+      xlim = c(0.9 * 1e-3, 0.035),
+      ylim = c(0, 1)
+    )+
+    labs(
+      x = "Landscape productivity *r<sub>max</sub>*",
+      y = "Repeatability (+/- SE)"
+    )
+}
+)
+```
+
+## Plot weight distributions
+
+```{r}
+wt_data = wt_data |> split(by = "type")
+
+wt_plots = lapply(wt_data, function(df) {
+  ggplot(df[pW >= 0.01])+
+  geom_hline(
+    yintercept = 0, lty = 2,
+    col = "grey"
+  )+
+  geom_tile(
     aes(
-      growth, 
-      rpt_v,
-      ymin = rpt_v - rpt_se,
-      ymax = rpt_v + rpt_se,
-      fill = growth
+      variable, value,
+      fill = col
     ),
-    alpha = 0.9,
-    shape = 21,
-    position = position_jitter(
-      width = 0.01
-    ),
-    show.legend = F
+    width = 0.8,
+    show.legend = T
   )+
-  scale_fill_viridis_c(
-    option = "D",
-    trans = "log10",
-    begin = 0.1,
-    end = 1
-  )+
-  scale_x_log10()+
-  facet_wrap(~ type,
-             ncol = 3,
-             scales = "free_y",
-             labeller = labeller(
-               type = c(
-                 "exploit" = "Exploit. comp.",
-                 "interf" = "Interf. comp.",
-                 "random" = "Random. move"
-               )
-             )
-  )+
+  scale_fill_identity()+
   theme_classic(
     base_size = 10
   )+
@@ -62,28 +151,48 @@ plot_repeatability =
     strip.text = element_text(
       face = "italic"
     ),
-    axis.title.x = ggtext::element_markdown(),
-    panel.grid.major.y = element_line(
-      colour = "grey",
-      # size = 0.4,
-      linetype = 2
+    panel.border = element_rect(
+      fill = "transparent",
+      colour = "grey"
     )
   )+
-  coord_cartesian(
-    expand = F,
-    xlim = c(0.9 * 1e-3, 0.035),
-    ylim = c(0, 1)
+  facet_wrap(~growth,
+             scales = "free_y",
+             labeller = label_both,
+             ncol = 2
   )+
+  coord_cartesian(ylim = c(-1, 1))+
   labs(
-    x = "Landscape productivity *r<sub>max</sub>*",
-    y = "Repeatability (+/- SE)"
+    x = "Movement weight",
+    y = "Scaled weight value"
+  )
+})
+
+```
+
+```{r}
+fig_rpt = 
+  wrap_plots(
+  append(
+    wt_plots,
+    rpt_plots
+  ),
+  ncol = 2
+) +
+  plot_annotation(
+    tag_levels = "A"
+  ) &
+  theme(
+    plot.tag = element_text(
+      face = "bold"
+    )
   )
 
-# save figure
 ggsave(
-  plot_repeatability,
+  fig_rpt,
   filename = "figures/fig_repeatability.png",
-  height = 3, width = 5
+  width = 5,
+  height = 6
 )
 ```
 
