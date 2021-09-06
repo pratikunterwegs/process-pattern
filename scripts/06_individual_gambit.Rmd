@@ -112,7 +112,9 @@ a = data_summary$model[[1]]
 model_fits = data_summary[, c("growth", "type", "rep_", "model")]
 model_fits[, fit := lapply(model, function(df) {
   a = df |> summary() |> coefficients()
-  as.data.table(a)
+  b = as.data.table(a)
+  b[, term := rownames(a)]
+  b
 })]
 
 # unnest data
