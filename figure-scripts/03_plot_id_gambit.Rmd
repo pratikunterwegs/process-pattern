@@ -11,3 +11,105 @@ library(ggplot2)
 library(colorspace)
 library(patchwork)
 ```
+
+```{r}
+data = fread("data/data_idgambit_coefs.csv")
+```
+
+```{r}
+data[term != "(Intercept)", list(
+  length(p.value < 0.05)
+), by = c("type", "growth", "term")]
+
+# custom cols
+data[, col := case_when(
+  term == "mean_r" ~ "forestgreen",
+  term != "mean_r" ~ "royalblue"
+)]
+data[, col := ifelse(p.value > .05, "grey", col)]
+```
+
+```{r}
+data = split(data[!term %in% c("(Intercept)")], by = "type")
+
+plots = lapply(data, function(df) {
+  ggplot(df)+
+    geom_hline(
+      yintercept = 0,
+      col = "grey20",
+      lty = 2
+    )+
+    geom_pointrange(
+      aes(growth, Estimate, 
+          ymin = Estimate - `Std. Error`,
+          ymax = Estimate + `Std. Error`,
+          col = col,
+          shape = p.value < 0.05),
+      position = position_jitter(
+        width = 0.02  
+      ),
+      show.legend = F
+    )+
+    scale_shape_manual(
+      values = c(
+        "TRUE" = 1,
+        "FALSE" = 2
+      )
+    )+
+    scale_colour_identity()+
+    scale_x_log10()+
+    scale_y_continuous(
+      trans = ggallin::pseudolog10_trans
+    )+
+    facet_wrap(
+      ~ term, scales = "free",
+      labeller = labeller(
+        term = c(
+          "mean_r" = "Cell growth rate r",
+          "wt_2" = "sN", 
+          "wt_3" = "sH",
+          "wt_4" = "sP"
+        )
+      )
+    )+
+    theme_classic(
+      base_size = 10
+    )+
+    theme(
+      strip.background = element_blank(),
+      strip.text = element_text(
+        face = "italic"
+      ),
+      axis.title.x = ggtext::element_markdown()
+    )+
+    labs(
+      x = "Landscape productivity *r<sub>max</sub>*",
+      y = "Coefficient"
+    )
+}
+)
+```
+
+```{r}
+fig_id_gambit = 
+  wrap_plots(
+  plots, ncol = 1
+) +
+  plot_annotation(
+    tag_levels = "A"
+  ) &
+  theme(
+    plot.tag = element_text(
+      face = "bold"
+    )
+  )
+
+# save
+ggsave(
+  fig_id_gambit,
+  filename = "figures/fig_id_gambit.png",
+  height = 6,
+  width = 3.5
+)
+```
+
