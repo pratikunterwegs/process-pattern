@@ -14,6 +14,8 @@ library(rptR)
 
 ## Prepare data
 
+### Read data
+
 ```{r}
 paths = list.files(path = "data/lt_tracks", full.names = T)
 
@@ -24,6 +26,23 @@ data = rbindlist(data)
 
 # remove all weights
 data_move = data[, !(c(sprintf("wt_%i", seq(8)), "gen"))]
+```
+
+### Summarise over intervals
+
+```{r}
+data_move = data_move[, list(
+  mean_distance = mean(distance),
+  sd_distance = sd(distance),
+  mean_r = mean(mean_r)
+), by = c("id", "interval", "growth", "type", "rep_")]
+
+# save
+fwrite(
+  data_move,
+  file = "data/data_for_rpt.csv"
+)
+ rm(data)
 ```
 
 ## Scale data
@@ -40,7 +59,7 @@ data_scaled[, id := floor(id * 99)]
 
 ```{r}
 get_repeatability = function(df) {
-  rptR::rpt(distance ~ mean_r + (1 | id) + (1 | interval), 
+  rptR::rpt(mean_distance ~ mean_r + (1 | id) + (1 | interval), 
             grname = "id", 
             data = df, 
             datatype = "Gaussian", nboot = 100, npermut = 10)
