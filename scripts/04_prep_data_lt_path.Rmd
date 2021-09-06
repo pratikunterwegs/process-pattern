@@ -33,7 +33,8 @@ for (path in paths) {
   param = read_config(path)
 
   # round tstep to nearest 1000
-  data[, interval := cumsum(t %% 1000 == 0)]
+  data[, day := cumsum(t %% 100 == 0), by = "id"]
+  data[, interval := cumsum(t %% 1000 == 0), by = "id"]
   
   # link environmental data
   # data = split(data, by = "interval")
@@ -61,7 +62,7 @@ for (path in paths) {
   
   # data = rbindlist(data)
   
-  data = data[, list(paths = list(.SD)), by = c("id", "interval")]
+  data = data[, list(paths = list(.SD)), by = c("id", "day", "interval")]
   data[, c("displacement", "distance") := list(
     vapply(paths, get_displacement, FUN.VALUE = 1.0),
     vapply(paths, get_distance, FUN.VALUE = 1L)
@@ -97,6 +98,8 @@ for (path in paths) {
   data = merge(data, wt_data)
   
   data$paths = NULL
+  
+  setorder(data, id, day, interval)
   
   if (!dir.exists("data/lt_tracks")) {
     dir.create("data/lt_tracks")
