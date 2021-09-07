@@ -55,14 +55,16 @@ data_id = Map(data_id, params, f = function(df, p) {
 
 # bind
 data_id = rbindlist(data_id)
-data_id[, interval := round(t, -3)]
+data_id[, day := cumsum(t %% 100 == 0), by = c("id", "rep_", "growth", "type")]
+data_id[, interval := cumsum(t %% 1000 == 0), by = c("id", "rep_", "growth", "type")]
 
-data_id = data_id[interval %in% c(1000, 3000, 6000, 8000)]
+data_id = data_id[interval %in% c(1,3,6,8)]
 
 data_id = split(data_id, by = c("id", "interval", "growth", "type", "rep_"))
 
 # transform paths using first point as origin to handle wrapping
 data_id = lapply(data_id, function(df) {
+  setorder(df, t)
   df$x_wrap = scale_wrap_coords(df$x) + rnorm(length(df$x), 0, 0.3)
   df$y_wrap = scale_wrap_coords(df$y) + rnorm(length(df$x), 0, 0.3)
   df
