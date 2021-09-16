@@ -1,0 +1,70 @@
+---
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r}
+library(data.table)
+library(ggplot2)
+library(patchwork)
+library(colorspace)
+```
+
+
+```{r}
+data = fread("data/data_lt_wts_scaled.csv")
+data = data[growth %in% c(0.0033, 0.01, 0.03) & rep_ <= 3]
+
+# split data
+data = split(data, by = "type")
+```
+
+```{r}
+plots = lapply(data, function(df) {
+  ggplot(df)+
+    geom_hline(
+      yintercept = 0, size = 0.2,
+      col = "grey"
+    )+
+    geom_vline(
+      xintercept = 0, size = 0.2,
+      col = "grey"
+    )+
+    geom_point(
+      aes(wt_4, wt_3, fill = wt_2),
+      shape = 21, col = "transparent",
+      show.legend = F
+    )+
+    scale_fill_continuous_diverging(
+      palette = "Berlin",
+      limits = c(-1, 1)
+    )+
+    scale_x_continuous(
+      trans = ggallin::ssqrt_trans
+    )+
+    scale_y_continuous(
+      trans = ggallin::ssqrt_trans
+    )+
+    facet_grid(
+      rep_ ~ growth,
+      labeller = label_both
+    )+
+    coord_cartesian(
+      xlim = c(-1, 1),
+      ylim = c(-1, 1)
+    )+
+    theme_minimal(
+      base_size = 10
+    )+
+    labs(
+      x = "sP",
+      y = "sH"
+    )
+})
+
+wrap_plots(plots, ncol = 1) |>
+  ggsave(
+    filename = "figures/fig_scaled_wt_morphs.png"
+  )
+```
+

@@ -28,8 +28,11 @@ paths = list.dirs(path = "data", recursive = F)
 paths = paths[grep("sim", paths)]
 
 # get weight data
-data = lapply(paths, get_wt_data, gen_start = 250, gen_end = 250,
-  n_agents = 1000)
+data = lapply(
+  paths, get_wt_data, 
+  gen_start = 250, gen_end = 250, gen_add = NULL,
+  n_agents = 5000
+)
 ```
 
 ## Read and link parameters
@@ -48,4 +51,33 @@ data = rbindlist(data)
 
 ```{r}
 fwrite(data, file = "data/data_lt_wt_gens.csv")
+```
+
+## Scale weights
+
+```{r}
+# read the data in if needed
+data = fread("data/data_lt_wt_gens.csv")
+
+# select movement weights
+data = data[, !(sprintf("wt_%i", c(seq(5, 8))))]
+
+# scale by sum of absolute values
+data[, wt_abs_sum := apply(
+  data[, c("wt_1", "wt_2", "wt_3", "wt_4")], 
+  1, 
+  FUN = function(x) {
+    sum(abs(x))
+  })
+]
+
+data[, c("wt_1", "wt_2", "wt_3", "wt_4") := lapply(
+  .SD, `/`, wt_abs_sum
+), .SDcols = c("wt_1", "wt_2", "wt_3", "wt_4")]
+```
+
+Save scaled weights.
+
+```{r}
+fwrite(data, file = "data/data_lt_wts_scaled.csv")
 ```
