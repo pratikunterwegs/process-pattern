@@ -106,12 +106,88 @@ plot_move =
 
 ## Figures for path statistics
 
+```{r}
+data_sc_wt = fread("data/data_lt_wts_scaled.csv")
+data_sc_wt = data_sc_wt[growth %in% c(0.01, 0.03) & rep_ == 2]
+
+# split data
+# data_sc_wt = split(data_sc_wt, by = "type")
+```
+
+```{r}
+# plots = lapply(data_sc_wt, function(df) {
+plot_scaled_wt = 
+  ggplot(data_sc_wt)+
+    geom_hline(
+      yintercept = 0, size = 0.1,
+      col = "red"
+    )+
+    geom_vline(
+      xintercept = 0, size = 0.1,
+      col = "red"
+    )+
+    geom_jitter(
+      aes(wt_4, wt_3, fill = wt_2),
+      shape = 21, col = "transparent",
+      show.legend = T
+    )+
+    scale_fill_continuous_sequential(
+      palette = "Batlow", 
+      rev = F,
+      limits = c(-1, 1),
+      alpha = 1
+    )+
+    scale_x_continuous(
+      # trans = ggallin::ssqrt_trans
+    )+
+    scale_y_continuous(
+      # trans = ggallin::ssqrt_trans
+    )+
+    facet_wrap(
+      type ~ growth, 
+      ncol = 2, 
+      scales = "free_x",
+      labeller = labeller(
+        .multi_line = F,
+        growth = label_both,
+        type = c(
+          "exploit" = "Exploit. comp.",
+          "interf" = "Interf. comp."
+        )
+      )
+    )+
+    coord_cartesian(
+      expand = T,
+      xlim = c(-1, 1),
+      ylim = c(-1, 1)
+    )+
+    theme_classic(
+      base_size = 10
+    )+
+    theme(
+      panel.grid.minor = element_blank(),
+      panel.border = element_rect(
+        colour = "grey",
+        fill = NA,
+        size = 0.1
+      ),
+      strip.background = element_blank(),
+      strip.text = element_text(
+        face = "italic"
+      ),
+      legend.position = "top",
+      legend.key.height = unit(1, "mm")
+    )+
+    labs(
+      x = "sP",
+      y = "sH",
+      fill = "sN"
+    )
+```
+
 ### Get data and cluster by strongest move weight
 
 ```{r}
-# get weight data
-data_wt = fread("data/data_lt_wt_gens.csv")[growth %in% c(0.01, 0.03),]
-
 # get path summaries
 paths = list.files(path = "data/lt_tracks", full.names = T)
 # read files
@@ -120,7 +196,8 @@ data_stats = lapply(paths, fread)
 data_stats = rbindlist(data_stats)
 
 # link to data_stats
-data_stats = merge(data_stats, data_wt)
+data_stats = merge(data_stats[, !(c("wt_2", "wt_3", "wt_4"))], data_sc_wt, 
+                   by = c("id", "growth", "type", "rep_", "intake", "gen"))
 
 # class agents on wights
 data_stats[, cluster := apply(
@@ -128,6 +205,7 @@ data_stats[, cluster := apply(
     which.max(abs(x))
   })
 ]
+
 data_stats[, cluster := dplyr::case_when(
   cluster == 1 ~ "sN",
   cluster == 2 ~ "sH",
@@ -193,83 +271,13 @@ plot_dist_hist =
   )
 ```
 
-## Plot weights distribution
-
-```{r}
-# read data
-wt_data = fread("data/data_lt_wt_gens.csv")
-wt_data = wt_data[, c("id", "growth", "type", "rep_", 
-                      sprintf("wt_%i", c(2, 3, 4)))]
-
-setnames(wt_data, old = c("wt_2", "wt_3", "wt_4"), 
-         new = c("sN", "sH", "sP"))
-wt_data = melt(wt_data, id.vars = c("id", "growth", "type", "rep_"))
-
-# scale wts
-wt_data[, value := cut_wt_lower(value, steps = 100, scale = 20)]
-
-wt_data = wt_data[, list(pW = .N / 1000), by = c("growth", "type", "rep_", "variable", "value")]
-wt_data[, col := dplyr::case_when(
-  variable == "sN" ~ "darkred",
-  variable == "sH" ~ "steelblue",
-  variable == "sP" ~ "darkgreen"
-)]
-wt_data[, col := scales::alpha(col, pW*10)]
-```
-
-```{r}
-plot_wt_dist =
-  ggplot(wt_data[growth %in% c(0.01, 0.03) & 
-                   type != "random" & 
-                   rep_ == 2 &
-                   pW >= 0.01])+
-  geom_hline(
-    yintercept = 0, lty = 2,
-    col = "grey"
-  )+
-  geom_tile(
-    aes(
-      variable, value,
-      fill = col
-    ),
-    width = 0.8,
-    show.legend = T
-  )+
-  scale_fill_identity()+
-  theme_classic(
-    base_size = 10
-  )+
-  theme(
-    strip.background = element_blank(),
-    strip.text = element_text(
-      face = "italic"
-    )
-  )+
-  facet_wrap(type ~ growth, ncol = 2, scales = "free_x",
-             labeller = labeller(
-               .multi_line = F,
-               growth = label_both,
-               type = c(
-                 "exploit" = "Exploit. comp.",
-                 "interf" = "Interf. comp."
-               )
-             )
-  )+
-  coord_cartesian(ylim = c(-1, 1))+
-  labs(
-    x = "Movement weight",
-    y = "Scaled weight value"
-  )
-```
-
-
 ## Wrap all plots
 
 ```{r}
 fig_id_var =
   wrap_plots(
     plot_move,
-    plot_wt_dist,
+    plot_scaled_wt,
     plot_dist_hist,
     ncol = 2,
     design = "AAABBB\nAAACCC"

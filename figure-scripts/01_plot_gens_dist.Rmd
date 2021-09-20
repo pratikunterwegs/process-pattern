@@ -33,17 +33,6 @@ data_int_summary = data[, list(
 ```{r}
 plot_intake_gen =
   ggplot(data[growth == 0.01 & type != "random"])+
-  # geom_ribbon(
-  #   aes(g, 
-  #       ymin = mean_int - sd_int,
-  #       ymax = mean_int + sd_int,
-  #       group = rep_
-  #   ),
-  #   fill = "transparent",
-  #   col = "grey90",
-  #   size = 0.1
-  # )+
-  
   geom_bin2d(
     aes(
       g, intake,
@@ -57,7 +46,7 @@ plot_intake_gen =
     aes(g, mean_int,
         ymin = mean_int - sd_int,
         ymax = mean_int + sd_int),
-    col = "indianred",
+    col = "grey20",
     shape = 1, size = 0.1
   )+
   scale_fill_continuous_sequential(
@@ -92,7 +81,7 @@ plot_intake_gen =
     ylim = c(0, 50)
   )+
   labs(
-    y = "Intake",
+    y = "Per capita intake",
     x = "Generation",
     fill = "% Agents"
   )
@@ -110,15 +99,6 @@ data_dist_summary = data[, list(
 ```{r}
 plot_dist_gen =
   ggplot(data[growth == 0.01 & type != "random"])+
-  # geom_ribbon(
-  #   aes(g, 
-  #       
-  #       group = rep_
-  #   ),
-  #   fill = "transparent",
-  #   col = "grey90",
-  #   size = 0.1
-  # )+
   geom_bin2d(
     aes(
       g, distance,
@@ -132,10 +112,10 @@ plot_dist_gen =
     aes(g, mean_dist,
         ymin = mean_dist - sd_dist,
         ymax = mean_dist + sd_dist),
-    col = "indianred", shape = 1, size = 0.1
+    col = "grey20", shape = 1, size = 0.1
   )+
   scale_fill_continuous_sequential(
-    palette = "Blues 3",
+    palette = "Blues 2",
     rev = T,
     trans = "log10",
     labels = scales::percent,
@@ -167,7 +147,7 @@ plot_dist_gen =
     ylim = c(0, 350)
   )+
   labs(
-    y = "Distance",
+    y = "Distance moved",
     x = "Generation",
     fill = "# Agents"
   )
@@ -211,7 +191,7 @@ plot_wt_evo = function(df) {
     width = 10
   )+
   scale_fill_viridis_c(
-    option = "A", direction = -1,
+    option = "E", direction = -1,
     limits = c(0.02, 1),
     na.value = "transparent",
     label = scales::percent

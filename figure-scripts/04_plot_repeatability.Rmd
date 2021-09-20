@@ -23,33 +23,6 @@ source("R/fun_wt_vals.R")
 data = fread("data/data_repeatability.csv")
 ```
 
-## Load weight data
-
-```{r}
-wt_data = fread("data/data_lt_wt_gens.csv")
-wt_data = wt_data[, c("id", "growth", "type", "rep_", 
-                      sprintf("wt_%i", c(2, 3, 4)))]
-
-setnames(wt_data, old = c("wt_2", "wt_3", "wt_4"), 
-         new = c("sN", "sH", "sP"))
-wt_data = melt(wt_data, id.vars = c("id", "growth", "type", "rep_"))
-
-# subset for some growth and replicates
-wt_data = wt_data[rep_ == 1 & growth %in% c(0.0033, 0.03)]
-
-# scale wts
-wt_data[, value := cut_wt_lower(value, steps = 100, scale = 20)]
-
-wt_data = wt_data[, list(pW = .N / 100), 
-                  by = c("growth", "type", "rep_", "variable", "value")]
-wt_data[, col := dplyr::case_when(
-  variable == "sN" ~ "darkred",
-  variable == "sH" ~ "steelblue",
-  variable == "sP" ~ "darkgreen"
-)]
-wt_data[, col := scales::alpha(col, pW)]
-```
-
 ## Plot repeatability
 
 ```{r}
@@ -123,62 +96,12 @@ rpt_plots = lapply(data, function(df) {
 )
 ```
 
-## Plot weight distributions
-
-```{r}
-wt_data = wt_data |> split(by = "type")
-
-wt_plots = lapply(wt_data, function(df) {
-  ggplot(df[pW >= 0.01])+
-  geom_hline(
-    yintercept = 0, lty = 2,
-    col = "grey"
-  )+
-  geom_tile(
-    aes(
-      variable, value,
-      fill = col
-    ),
-    width = 0.8,
-    show.legend = T
-  )+
-  scale_fill_identity()+
-  theme_classic(
-    base_size = 10
-  )+
-  theme(
-    strip.background = element_blank(),
-    strip.text = element_text(
-      face = "italic"
-    ),
-    panel.border = element_rect(
-      fill = "transparent",
-      colour = "grey"
-    )
-  )+
-  facet_wrap(~growth,
-             scales = "free_y",
-             labeller = label_both,
-             ncol = 2
-  )+
-  coord_cartesian(ylim = c(-1, 1))+
-  labs(
-    x = "Movement weight",
-    y = "Scaled weight value"
-  )
-})
-
-```
-
 ```{r}
 fig_rpt = 
   wrap_plots(
-  append(
-    wt_plots,
-    rpt_plots
-  ),
-  ncol = 2
-) +
+    rpt_plots,
+    ncol = 2
+  ) +
   plot_annotation(
     tag_levels = "A"
   ) &
@@ -191,8 +114,8 @@ fig_rpt =
 ggsave(
   fig_rpt,
   filename = "figures/fig_repeatability.png",
-  width = 5,
-  height = 6
+  width = 5.2,
+  height = 3
 )
 ```
 
