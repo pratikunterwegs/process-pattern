@@ -29,9 +29,6 @@ needs to be made recursive over dirs.
 ```{r}
 paths = list.dirs(path = "data", recursive = F)
 paths = paths[grep("sim", paths)]
-
-# select reps 002
-paths = paths[grep("rep_002", paths)]
 ```
 
 ## Read parameters
@@ -42,19 +39,83 @@ params = lapply(paths, read_config)
 
 ## Select individual paths
 
-```{r}
-data_id = lapply(paths, function(path) {
-  fread(glue("{path}/00250_pos.csv"))[id < 4,]
-})
+### Read scaled weights
 
-# link params
-data_id = Map(data_id, params, f = function(df, p) {
-  df[, names(p) := list(p["growth"], p["type"], p["rep_"])]
-  df
-})
+```{r}
+# read scaled weight data
+data_sc_wt = fread("data/data_lt_wts_scaled.csv")
+data_sc_wt = data_sc_wt[growth %in% c(0.01, 0.03) & id < 100]
+
+# assign types
+data_sc_wt[, agent_strategy := dplyr::case_when(
+  wt_4 > 0.6 ~ "prey tracking",
+  abs(wt_4 - wt_3) < 0.1 ~ "prey and handler tracking",
+  wt_3 > 0.5 ~ "handler tracking",
+  wt_3 < -0.5 ~ "handler avoiding",
+  wt_2 > 0.5 ~ "non-handler tracking",
+  wt_2 < -0.5 ~ "non-handler avoiding",
+  T ~ "other"
+)]
+
+# get ids with each strategy per sim
+data_to_get = data_sc_wt[, 
+  list(ids = list(head(unique(id)))), 
+  by = c("agent_strategy", "type", "growth", "rep_")
+]
+
+# unlist
+data_to_get = data_to_get[, 
+  list(id = unlist(ids)), 
+  by = c("type", "growth", "rep_", "agent_strategy")
+]
+
+# select first four of all strategies
+data_to_get = data_to_get[, 
+  .SD[seq(4)], 
+  by = c("type", "growth", "agent_strategy")
+]
+
+# drop NAs
+data_to_get = data_to_get[complete.cases(data_to_get)]
+```
+
+### Read from paths
+
+Prepare paths.
+
+```{r}
+params = lapply(params, function(df) as.data.table(as.list(df))) |> 
+  rbindlist()
+params[, paths := paths]
+
+params[, c("growth", "rep_") := lapply(.SD, as.numeric),
+  .SD = c("growth", "rep_")
+]
+
+# link ids to read
+paths_to_read = merge(data_to_get, params, all.x = T,
+  by = c("type", "growth", "rep_")
+)
+
+# nest ids
+paths_to_read = paths_to_read[, list(
+  ids = list(id)
+), by = c("type", "growth", "rep_", "agent_strategy", "paths")]
+```
+
+```{r}
+data_id = copy(paths_to_read)
+data_id[, data := Map(paths, ids, f = function(path, ids) {
+    fread(glue("{path}/00250_pos.csv"))[id %in% ids,]
+  }
+)]
+
+# unlist data
+data_id = data_id[, unlist(data, recursive = F), 
+  by = c("rep_", "growth", "type", "agent_strategy")
+]
 
 # bind
-data_id = rbindlist(data_id)
 data_id[, day := cumsum(t %% 100 == 0), by = c("id", "rep_", "growth", "type")]
 data_id[, interval := cumsum(t %% 1000 == 0), by = c("id", "rep_", "growth", "type")]
 
@@ -77,7 +138,7 @@ data_id = rbindlist(data_id)
 ```{r}
 prod = read_landscape("data/data_parameters/kernels32.png")
 data_id = link_landscape(data_id, prod)
-setorder(data_id, id, t)
+setorder(data_id, growth, type, id, t)
 ```
 
 ```{r}
