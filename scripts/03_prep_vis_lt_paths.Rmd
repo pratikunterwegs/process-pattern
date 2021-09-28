@@ -126,8 +126,8 @@ data_id = split(data_id, by = c("id", "interval", "growth", "type", "rep_"))
 # transform paths using first point as origin to handle wrapping
 data_id = lapply(data_id, function(df) {
   setorder(df, t)
-  df$x_wrap = scale_wrap_coords(df$x) + rnorm(length(df$x), 0, 0.3)
-  df$y_wrap = scale_wrap_coords(df$y) + rnorm(length(df$x), 0, 0.3)
+  df$x_wrap = scale_wrap_coords(df$x) + rnorm(length(df$x), 0, 0.2)
+  df$y_wrap = scale_wrap_coords(df$y) + rnorm(length(df$x), 0, 0.2)
   df
 })
 
