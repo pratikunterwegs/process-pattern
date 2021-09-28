@@ -60,20 +60,20 @@ fwrite(data, file = "data/data_lt_wt_gens.csv")
 data = fread("data/data_lt_wt_gens.csv")
 
 # select movement weights
-data = data[, !(sprintf("wt_%i", c(seq(5, 8))))]
+data = data[, !(sprintf("wt_%i", c(1, seq(5, 8))))]
 
 # scale by sum of absolute values
 data[, wt_abs_sum := apply(
-  data[, c("wt_1", "wt_2", "wt_3", "wt_4")], 
+  data[, c("wt_2", "wt_3", "wt_4")], 
   1, 
   FUN = function(x) {
     sum(abs(x))
   })
 ]
 
-data[, c("wt_1", "wt_2", "wt_3", "wt_4") := lapply(
+data[, c("wt_2", "wt_3", "wt_4") := lapply(
   .SD, `/`, wt_abs_sum
-), .SDcols = c("wt_1", "wt_2", "wt_3", "wt_4")]
+), .SDcols = c("wt_2", "wt_3", "wt_4")]
 ```
 
 Save scaled weights.
