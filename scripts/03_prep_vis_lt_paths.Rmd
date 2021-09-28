@@ -49,7 +49,7 @@ data_sc_wt = data_sc_wt[growth %in% c(0.01, 0.03) & id < 100]
 # assign types
 data_sc_wt[, agent_strategy := dplyr::case_when(
   wt_4 > 0.6 ~ "prey tracking",
-  abs(wt_4 - wt_3) < 0.1 ~ "prey and handler tracking",
+  (wt_4 > 0 & wt_3 > 0 & abs(wt_4 - wt_3)) < 0.1 ~ "prey and handler tracking",
   wt_3 > 0.5 ~ "handler tracking",
   wt_3 < -0.5 ~ "handler avoiding",
   wt_2 > 0.5 ~ "non-handler tracking",
