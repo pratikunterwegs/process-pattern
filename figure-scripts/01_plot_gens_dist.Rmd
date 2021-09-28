@@ -19,47 +19,53 @@ source("R/fun_wt_vals.R")
 
 ```{r}
 data = fread("data/data_gens_dist_summary.csv")
+
+# filter data
+data = data[growth == 0.01 & !type %in% c("random", "interf")]
 ```
 
 ## Summarise energy
 
 ```{r}
-data_int_summary = data[, list(
-  mean_int = mean(intake),
-  sd_int = sd(intake)
-), by = c("type", "growth", "g")]
+# data_int_summary = data[, list(
+#   mean_int = mean(intake),
+#   sd_int = sd(intake)
+# ), by = c("type", "growth", "g")]
 ```
 
 ```{r}
 plot_intake_gen =
-  ggplot(data[growth == 0.01 & type != "random"])+
+  ggplot(data)+
   geom_bin2d(
     aes(
       g, intake,
-      group = rep_,
-      fill = ..count../100
+      # group = rep_,
+      fill = ..count../1000
     ),
     binwidth = c(10, 1)
   )+
-  geom_pointrange(
-    data = data_int_summary[growth == 0.01],
-    aes(g, mean_int,
-        ymin = mean_int - sd_int,
-        ymax = mean_int + sd_int),
-    col = "grey20",
-    shape = 1, size = 0.1
-  )+
+  # geom_pointrange(
+  #   data = data_int_summary[growth == 0.01],
+  #   aes(g, mean_int,
+  #       ymin = mean_int - sd_int,
+  #       ymax = mean_int + sd_int),
+  #   col = "grey20",
+  #   shape = 1, size = 0.1
+  # )+
   scale_fill_continuous_sequential(
-    palette = "Greens 2",
-    trans = "log10",
+    palette = "Batlow",
+    trans = "sqrt",
     labels = scales::percent,
-    breaks = c(0.03, 0.1, 0.33)
+    breaks = c(0.02, 0.1, 0.3),
+    limits = c(0.02, 0.3),
+    na.value = "transparent"
   )+
   facet_wrap(~type, scales = "free_y",
              labeller = labeller(
                type = c(
                  "exploit" = "Exploit. comp.",
-                 "interf" = "Interf. comp."
+                 "interf" = "Interf. comp.",
+                 "obligate" = "Fixed strategy"
                )
              )
   )+
@@ -68,7 +74,7 @@ plot_intake_gen =
   )+
   theme(
     legend.position = "top",
-    legend.key.height = unit(2, units = "mm"),
+    legend.key.height = unit(1, units = "mm"),
     strip.background = element_blank(),
     strip.text = element_text(
       face = "italic"
@@ -90,42 +96,44 @@ plot_intake_gen =
 ## Summarise distance
 
 ```{r}
-data_dist_summary = data[, list(
-  mean_dist = mean(distance),
-  sd_dist = sd(distance)
-), by = c("type", "growth", "g")]
+# data_dist_summary = data[, list(
+#   mean_dist = mean(distance),
+#   sd_dist = sd(distance)
+# ), by = c("type", "growth", "g")]
 ```
 
 ```{r}
 plot_dist_gen =
-  ggplot(data[growth == 0.01 & type != "random"])+
+  ggplot(data)+
   geom_bin2d(
     aes(
       g, distance,
-      group = rep_,
-      fill = ..count../100
+      # group = rep_,
+      fill = ..count../(max(data$rep_)*100)
     ),
-    binwidth = c(10, 5)
+    binwidth = c(10, 10)
   )+
-  geom_pointrange(
-    data = data_dist_summary[growth == 0.01],
-    aes(g, mean_dist,
-        ymin = mean_dist - sd_dist,
-        ymax = mean_dist + sd_dist),
-    col = "grey20", shape = 1, size = 0.1
-  )+
+  # geom_pointrange(
+  #   data = data_dist_summary[growth == 0.01],
+  #   aes(g, mean_dist,
+  #       ymin = mean_dist - sd_dist,
+  #       ymax = mean_dist + sd_dist),
+  #   col = "grey20", shape = 1, size = 0.1
+  # )+
   scale_fill_continuous_sequential(
-    palette = "Blues 2",
-    rev = T,
-    trans = "log10",
+    palette = "Sunset",
+    trans = "sqrt",
     labels = scales::percent,
-    breaks = c(0.03, 0.1, 0.25)
+    breaks = c(0.02, 0.1, 0.3),
+    limits = c(0.02, 0.3),
+    na.value = "transparent"
   )+
   facet_wrap(~type, scales = "free_y",
              labeller = labeller(
                type = c(
                  "exploit" = "Exploit. comp.",
-                 "interf" = "Interf. comp."
+                 "interf" = "Interf. comp.",
+                 "obligate" = "Fixed strategy"
                )
              )
   )+
@@ -134,7 +142,8 @@ plot_dist_gen =
   )+
   theme(
     legend.position = "top",
-    legend.key.height = unit(2, units = "mm"),
+    legend.key.height = unit(1, units = "mm"),
+    legend.title = element_text(size = 8),
     strip.background = element_blank(),
     strip.text = element_text(
       face = "italic"
@@ -144,12 +153,12 @@ plot_dist_gen =
   coord_cartesian(
     expand = F,
     xlim = c(-10, 260),
-    ylim = c(0, 350)
+    ylim = c(0, 400)
   )+
   labs(
     y = "Distance moved",
     x = "Generation",
-    fill = "# Agents"
+    fill = "% Agents"
   )
 ```
 
@@ -172,6 +181,9 @@ data_wt_count[, variable := dplyr::case_when(
   variable == "wt_4" ~ "sP"
 )]
 
+# set levels
+data_wt_count[, variable := factor(variable, levels = c("sP", "sH", "sN"))]
+
 # subset for index case
 data_wt_count = data_wt_count[growth == 0.01 & type != "random" & rep_ < 4, ]
 
@@ -190,9 +202,12 @@ plot_wt_evo = function(df) {
     aes(g, value, fill = pW),
     width = 10
   )+
-  scale_fill_viridis_c(
-    option = "E", direction = -1,
+  scale_fill_continuous_sequential(
+    palette = "Lajolla",
+    rev = F,
+    trans = "sqrt",
     limits = c(0.02, 1),
+    breaks = c(0.02, 0.25, 1),
     na.value = "transparent",
     label = scales::percent
   )+
@@ -236,7 +251,8 @@ plot_wt_evo = function(df) {
 ```
 
 ```{r}
-plots_wt_evo = lapply(data_wt_count[c("exploit", "interf")], plot_wt_evo)
+plots_wt_evo = lapply(data_wt_count[c("exploit", "obligate")], plot_wt_evo)
+wrap_plots(plots_wt_evo)
 ```
 
 ## Wrap figures
@@ -248,7 +264,7 @@ fig_evo_dyn =
       plot_intake_gen,
       plot_dist_gen,
       plots_wt_evo[["exploit"]],
-      plots_wt_evo[["interf"]]
+      plots_wt_evo[["obligate"]]
     ),
     design = "AB\nAB\nCD\nCD\nCD"
   ) +
@@ -263,7 +279,7 @@ fig_evo_dyn =
 ggsave(
   fig_evo_dyn,
   filename = "figures/fig_evo_dyn.png",
-  height = 6.5, width = 6.5
+  height = 6.5, width = 7
 )
 ```
 
