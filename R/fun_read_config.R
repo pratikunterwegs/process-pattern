@@ -12,6 +12,9 @@ read_config = function(path) {
   type = config_file[grep("agents.forage", config_file)]
   type = ifelse(stringr::str_extract(type, "\\d{1}") == "1", "exploit", "interf")
   
+  obligate = config_file[grep("agents.obligate", config_file)]
+  type = ifelse(stringr::str_extract(obligate, "\\d{1}") == "1", "obligate", type)
+  
   random = config_file[grep("mask", config_file)]
   random = stringr::str_extract(random, "\\d+")
   
