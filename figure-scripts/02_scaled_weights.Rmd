@@ -1,0 +1,275 @@
+---
+editor_options: 
+  chunk_output_type: console
+---
+
+# Figure functional variation
+
+```{r}
+library(data.table)
+library(ggplot2)
+library(patchwork)
+library(colorspace)
+
+# local funs
+source("R/fun_wt_vals.R")
+```
+
+## Load data
+
+```{r}
+data = fread("data/data_gens_dist_summary.csv")
+
+# filter data
+data = data[growth == 0.01 & !type %in% c("random", "interf")]
+```
+
+## Summarise weight evolution
+
+```{r}
+data_wt = data[, c("id", "g", "growth", "type", "rep_",
+                      sprintf("wt_%i", seq(2, 4, 1)))]
+
+# count props
+data_wt_count = melt(data_wt, id.vars = c("id", "g", "growth", "type", "rep_"))
+data_wt_count[, value := cut_wt_lower(value, steps = 25, scale = 40)]
+data_wt_count = data_wt_count[, list(pW = .N / 100), 
+              by = c("growth", "g", "type", "rep_", "variable", "value")]
+
+# rename weights
+data_wt_count[, variable := dplyr::case_when(
+  variable == "wt_2" ~ "sN",
+  variable == "wt_3" ~ "sH",
+  variable == "wt_4" ~ "sP"
+)]
+
+# set levels
+data_wt_count[, variable := factor(variable, levels = c("sP", "sH", "sN"))]
+
+# subset for index case
+data_wt_count = data_wt_count[growth == 0.01 & type != "random" & rep_ == 2, ]
+
+data_wt_count = split(data_wt_count, by = "type")
+```
+
+
+```{r}
+plot_wt_evo = function(df) {
+  ggplot(df)+
+    geom_hline(
+      yintercept = 0, lty = 2,
+      col = "grey"
+    )+
+    geom_tile(
+      aes(g, value, fill = pW),
+      width = 10
+    )+
+    scale_fill_continuous_sequential(
+      palette = "YlOrRd",
+      rev = T,
+      trans = "sqrt",
+      limits = c(0.02, 1),
+      breaks = c(0.02, 0.25, 1),
+      na.value = "transparent",
+      label = scales::percent
+    )+
+    scale_y_continuous(
+      trans = ggallin::ssqrt_trans,
+      breaks = c(-1, 0, 1)
+    )+
+    scale_x_continuous(
+      breaks = c(0, 50, 150, 250)
+    )+
+    facet_grid(
+      ~variable, scales = "free_y",
+      labeller = labeller(
+        rep_ = label_both
+      )
+    )+
+    theme_test(
+      base_size = 10
+    )+
+    theme(
+      axis.text.y = element_text(
+        angle = 90, hjust = 0.5
+      ),
+      legend.position = "top",
+      legend.key.height = unit(2, "mm"),
+      strip.background = element_blank(),
+      strip.text = element_text(
+        face = "italic"
+      )
+    )+
+    guides(
+      fill = guide_colorbar(
+        title.vjust = 1
+      )
+    )+
+    coord_cartesian(
+      ylim = c(-1, 1),
+      xlim = c(0, 250)
+    )+
+    labs(
+      x = "Generation",
+      y = "Scaled weight value",
+      fill = "% Agents"
+    )
+}
+```
+
+```{r}
+# apply fun over data
+plots_wt_evo = lapply(data_wt_count[c("exploit", "obligate")], plot_wt_evo)
+plots_wt_evo = wrap_plots(plots_wt_evo, guides = "collect") + 
+  plot_layout(tag_level = "new")
+```
+
+## Functional weight variation
+
+```{r}
+# read scaled weights
+data_sc_wt = fread("data/data_lt_wts_scaled.csv")
+data_sc_wt = data_sc_wt[growth %in% c(0.01) & rep_ < 4 & id < 100]
+data_sc_wt = data_sc_wt[type %in% c("exploit", "obligate")]
+
+# assign movement strategy
+data_sc_wt[, move_strategy := dplyr::case_when(
+  wt_4 > 0.6 ~ "prey tracking",
+  abs(wt_4 - wt_3) < 0.1 ~ "prey and handler tracking",
+  wt_3 > 0.5 ~ "handler tracking",
+  wt_3 < -0.5 ~ "handler avoiding",
+  wt_2 > 0.5 ~ "non-handler tracking",
+  wt_2 < -0.5 ~ "non-handler avoiding",
+  T ~ "other"
+)]
+
+# split by type
+data_sc_wt = split(data_sc_wt, by = "type")
+```
+
+```{r}
+plots = lapply(data_sc_wt, function(df) {
+# plot_scaled_wt = 
+  ggplot(df)+
+    geom_hline(
+      yintercept = 0, # size = 0.2,
+      col = "grey"
+    )+
+    geom_vline(
+      xintercept = 0, # size = 0.2,
+      col = "grey"
+    )+
+    geom_abline(
+      slope = c(-1, 1),
+      intercept = c(1, -1),
+      col = "grey",
+      lty = 2,
+      size = 0.5
+    )+
+    geom_jitter(
+      aes(wt_4, wt_3, fill = wt_2),
+      shape = 21, col = alpha("grey30", 0.1),
+      size = 3,
+      show.legend = T,
+      alpha = 0.5
+    )+
+    geom_text(
+      data = data.table(
+        x = c(1, 0.1, 0.1),
+        y = c(0, 1, -1),
+        strat = c("Prey tracking", "Handler tracking",  "Handler avoiding"),
+        angle = c(90, 0, 0)
+      ),
+      aes(x, y, label = strat, angle = angle),      
+      size = 3,
+      col = "grey30",
+      hjust = "inward",
+      fontface = "italic"
+    )+
+    scale_fill_continuous_diverging(
+      palette = "Blue-Red 2", 
+      rev = T,
+      # l2 = 90,
+      # l1 = 50,
+      limits = c(-1, 1),
+      breaks = c(-1, 1),
+      labels = c("Non-handler avoiding", "Non-handler tracking"),
+      alpha = 1
+    )+
+    scale_x_continuous(
+      # trans = ggallin::ssqrt_trans
+    )+
+    scale_y_continuous(
+      # trans = ggallin::ssqrt_trans
+    )+
+    facet_grid(
+      ~ comp_strat, 
+      # ncol = 2, 
+      labeller = labeller(
+        .multi_line = F,
+        growth = label_both,
+        comp_strat = c(
+          "forager" = "Foragers",
+          "klept" = "Kleptoparasites"
+        )
+      )
+    )+
+    coord_cartesian(
+      expand = T,
+      xlim = c(-0, 1),
+      ylim = c(-1, 1)
+    )+
+    theme_test(
+      base_size = 10
+    )+
+    theme(
+      strip.background = element_blank(),
+      strip.text = element_text(
+        face = "italic"
+      ),
+      legend.position = "top",
+      legend.key.height = unit(2, "mm")
+    )+
+    labs(
+      x = "sP",
+      y = "sH",
+      fill = NULL
+    )+
+    guides(
+      fill = guide_colorbar(override.aes = list(alpha = 1))
+    )
+})
+
+plot_move_types =
+  wrap_plots(
+  plots,
+  design = "ABB",
+  guides = "collect"
+) + plot_layout(tag_level = "new") &
+  theme(legend.position = "top")
+```
+
+## Make Figure 2
+
+```{r}
+fig_2 =
+  wrap_plots(
+    plots_wt_evo,
+    plot_move_types,
+    ncol = 1
+  ) & plot_annotation(
+    tag_levels = c("A", "1")
+  ) & theme(legend.position = "bottom",
+            plot.tag = element_text(
+              face = "bold"
+            )
+  )
+
+ggsave(
+  fig_2, filename = "figures/fig_02.png",
+  height = 150,
+  width = 170,
+  units = "mm"
+)
+```
+
