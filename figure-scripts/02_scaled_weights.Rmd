@@ -22,106 +22,7 @@ data = fread("data/data_gens_dist_summary.csv")
 
 # filter data
 data = data[growth == 0.01 & !type %in% c("random", "interf")]
-```
-
-## Summarise weight evolution
-
-```{r}
-data_wt = data[, c("id", "g", "growth", "type", "rep_",
-                      sprintf("wt_%i", seq(2, 4, 1)))]
-
-# count props
-data_wt_count = melt(data_wt, id.vars = c("id", "g", "growth", "type", "rep_"))
-data_wt_count[, value := cut_wt_lower(value, steps = 25, scale = 40)]
-data_wt_count = data_wt_count[, list(pW = .N / 100), 
-              by = c("growth", "g", "type", "rep_", "variable", "value")]
-
-# rename weights
-data_wt_count[, variable := dplyr::case_when(
-  variable == "wt_2" ~ "sN",
-  variable == "wt_3" ~ "sH",
-  variable == "wt_4" ~ "sP"
-)]
-
-# set levels
-data_wt_count[, variable := factor(variable, levels = c("sP", "sH", "sN"))]
-
-# subset for index case
-data_wt_count = data_wt_count[growth == 0.01 & type != "random" & rep_ == 2, ]
-
-data_wt_count = split(data_wt_count, by = "type")
-```
-
-
-```{r}
-plot_wt_evo = function(df) {
-  ggplot(df)+
-    geom_hline(
-      yintercept = 0, lty = 2,
-      col = "grey"
-    )+
-    geom_tile(
-      aes(g, value, fill = pW),
-      width = 10
-    )+
-    scale_fill_continuous_sequential(
-      palette = "YlOrRd",
-      rev = T,
-      trans = "sqrt",
-      limits = c(0.02, 1),
-      breaks = c(0.02, 0.25, 1),
-      na.value = "transparent",
-      label = scales::percent
-    )+
-    scale_y_continuous(
-      trans = ggallin::ssqrt_trans,
-      breaks = c(-1, 0, 1)
-    )+
-    scale_x_continuous(
-      breaks = c(0, 50, 150, 250)
-    )+
-    facet_grid(
-      ~variable, scales = "free_y",
-      labeller = labeller(
-        rep_ = label_both
-      )
-    )+
-    theme_test(
-      base_size = 10
-    )+
-    theme(
-      axis.text.y = element_text(
-        angle = 90, hjust = 0.5
-      ),
-      legend.position = "top",
-      legend.key.height = unit(2, "mm"),
-      strip.background = element_blank(),
-      strip.text = element_text(
-        face = "italic"
-      )
-    )+
-    guides(
-      fill = guide_colorbar(
-        title.vjust = 1
-      )
-    )+
-    coord_cartesian(
-      ylim = c(-1, 1),
-      xlim = c(0, 250)
-    )+
-    labs(
-      x = "Generation",
-      y = "Scaled weight value",
-      fill = "% Agents"
-    )
-}
-```
-
-```{r}
-# apply fun over data
-plots_wt_evo = lapply(data_wt_count[c("exploit", "obligate")], plot_wt_evo)
-plots_wt_evo = wrap_plots(plots_wt_evo, guides = "collect") + 
-  plot_layout(tag_level = "new")
+data = split(data, by = "type")
 ```
 
 ## Functional weight variation
@@ -249,13 +150,66 @@ plot_move_types =
   theme(legend.position = "top")
 ```
 
+## Plot distance moved
+
+```{r}
+plot_dist_gen = lapply(data, function(df) {
+  ggplot(df)+
+    geom_bin2d(
+      aes(
+        g, distance,
+        # group = rep_,
+        fill = ..count../1000
+      ),
+      binwidth = c(10, 10)
+    )+
+    scale_fill_continuous_sequential(
+      palette = "Batlow",
+      trans = "sqrt",
+      rev = T,
+      labels = scales::percent,
+      breaks = c(0.02, 0.1, 0.3),
+      limits = c(0.02, 0.3),
+      na.value = "transparent"
+    )+
+    theme_test(
+      base_size = 10
+    )+
+    theme(
+      legend.key.width = unit(5, units = "mm"),
+      legend.key.height = unit(2, units = "mm")
+    )+
+    guides(
+      fill = guide_colorbar(
+        title.vjust = 1
+      )
+    )+
+    coord_cartesian(
+      expand = F,
+      xlim = c(-10, 260),
+      ylim = c(0, 400)
+    )+
+    labs(
+      y = "Distance moved",
+      x = "Generation",
+      fill = "% Agents"
+    )
+})
+  
+plot_dist_gen =
+  wrap_plots(plot_dist_gen, guides = "collect")+
+  plot_layout(tag_level = "new") &
+    theme(legend.position = "bottom")
+```
+
+
 ## Make Figure 2
 
 ```{r}
 fig_2 =
   wrap_plots(
-    plots_wt_evo,
     plot_move_types,
+    plot_dist_gen,
     ncol = 1
   ) & plot_annotation(
     tag_levels = c("A", "1")
@@ -267,8 +221,8 @@ fig_2 =
 
 ggsave(
   fig_2, filename = "figures/fig_02.png",
-  height = 150,
-  width = 170,
+  height = 170,
+  width = 150,
   units = "mm"
 )
 ```

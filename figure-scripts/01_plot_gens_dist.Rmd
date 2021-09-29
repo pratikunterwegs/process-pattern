@@ -22,150 +22,67 @@ data = fread("data/data_gens_dist_summary.csv")
 
 # filter data
 data = data[growth == 0.01 & !type %in% c("random", "interf")]
+
+# split by type
+data = split(data, by = "type")
 ```
 
-## Summarise energy
+## Plot energy over time
 
 ```{r}
-# data_int_summary = data[, list(
-#   mean_int = mean(intake),
-#   sd_int = sd(intake)
-# ), by = c("type", "growth", "g")]
-```
+plot_intake_gen = lapply(data, function(df) {
+  ggplot(df)+
+    geom_bin2d(
+      aes(
+        g, intake,
+        # group = rep_,
+        fill = ..count../1000
+      ),
+      binwidth = c(10, 1)
+    )+
+    scale_fill_continuous_sequential(
+      palette = "Batlow",
+      trans = "sqrt",
+      labels = scales::percent,
+      breaks = c(0.02, 0.1, 0.2),
+      limits = c(0.02, 0.2),
+      na.value = "transparent"
+    )+
+    theme_test(
+      base_size = 10
+    )+
+    theme(
+      legend.key.width = unit(5, units = "mm"),
+      legend.key.height = unit(2, units = "mm")
+    )+
+    guides(
+      fill = guide_colorbar(
+        title.vjust = 1
+      )
+    )+
+    coord_cartesian(
+      expand = F,
+      xlim = c(-10, 260),
+      ylim = c(0, 50)
+    )+
+    labs(
+      y = "Per capita intake",
+      x = "Generation",
+      fill = "% Agents"
+    )
+})
 
-```{r}
-plot_intake_gen =
-  ggplot(data)+
-  geom_bin2d(
-    aes(
-      g, intake,
-      # group = rep_,
-      fill = ..count../1000
-    ),
-    binwidth = c(10, 1)
-  )+
-  # geom_pointrange(
-  #   data = data_int_summary[growth == 0.01],
-  #   aes(g, mean_int,
-  #       ymin = mean_int - sd_int,
-  #       ymax = mean_int + sd_int),
-  #   col = "grey20",
-  #   shape = 1, size = 0.1
-  # )+
-  scale_fill_continuous_sequential(
-    palette = "Batlow",
-    trans = "sqrt",
-    labels = scales::percent,
-    breaks = c(0.02, 0.1, 0.3),
-    limits = c(0.02, 0.3),
-    na.value = "transparent"
-  )+
-  facet_wrap(~type, scales = "free_y",
-             labeller = labeller(
-               type = c(
-                 "exploit" = "Exploit. comp.",
-                 "interf" = "Interf. comp.",
-                 "obligate" = "Fixed strategy"
-               )
-             )
-  )+
-  theme_classic(
-    base_size = 10
-  )+
-  theme(
-    legend.position = "top",
-    legend.key.height = unit(1, units = "mm"),
-    strip.background = element_blank(),
-    strip.text = element_text(
-      face = "italic"
-    ),
-    panel.grid.minor = element_blank()
-  )+
-  coord_cartesian(
-    expand = F,
-    xlim = c(-10, 260),
-    ylim = c(0, 50)
-  )+
-  labs(
-    y = "Per capita intake",
-    x = "Generation",
-    fill = "% Agents"
-  )
-```
-
-## Summarise distance
-
-```{r}
-# data_dist_summary = data[, list(
-#   mean_dist = mean(distance),
-#   sd_dist = sd(distance)
-# ), by = c("type", "growth", "g")]
-```
-
-```{r}
-plot_dist_gen =
-  ggplot(data)+
-  geom_bin2d(
-    aes(
-      g, distance,
-      # group = rep_,
-      fill = ..count../(max(data$rep_)*100)
-    ),
-    binwidth = c(10, 10)
-  )+
-  # geom_pointrange(
-  #   data = data_dist_summary[growth == 0.01],
-  #   aes(g, mean_dist,
-  #       ymin = mean_dist - sd_dist,
-  #       ymax = mean_dist + sd_dist),
-  #   col = "grey20", shape = 1, size = 0.1
-  # )+
-  scale_fill_continuous_sequential(
-    palette = "Sunset",
-    trans = "sqrt",
-    labels = scales::percent,
-    breaks = c(0.02, 0.1, 0.3),
-    limits = c(0.02, 0.3),
-    na.value = "transparent"
-  )+
-  facet_wrap(~type, scales = "free_y",
-             labeller = labeller(
-               type = c(
-                 "exploit" = "Exploit. comp.",
-                 "interf" = "Interf. comp.",
-                 "obligate" = "Fixed strategy"
-               )
-             )
-  )+
-  theme_classic(
-    base_size = 10
-  )+
-  theme(
-    legend.position = "top",
-    legend.key.height = unit(1, units = "mm"),
-    legend.title = element_text(size = 8),
-    strip.background = element_blank(),
-    strip.text = element_text(
-      face = "italic"
-    ),
-    panel.grid.minor = element_blank()
-  )+
-  coord_cartesian(
-    expand = F,
-    xlim = c(-10, 260),
-    ylim = c(0, 400)
-  )+
-  labs(
-    y = "Distance moved",
-    x = "Generation",
-    fill = "% Agents"
-  )
+plot_intake_gen = wrap_plots(
+  plot_intake_gen, 
+  guides = "collect") +
+  plot_layout(tag_level = "new") & 
+  theme(legend.position = "bottom")
 ```
 
 ## Summarise weight evolution
 
 ```{r}
-data_wt = data[, c("id", "g", "growth", "type", "rep_",
+data_wt = rbindlist(data)[, c("id", "g", "growth", "type", "rep_",
                       sprintf("wt_%i", seq(2, 4, 1)))]
 
 # count props
@@ -185,7 +102,7 @@ data_wt_count[, variable := dplyr::case_when(
 data_wt_count[, variable := factor(variable, levels = c("sP", "sH", "sN"))]
 
 # subset for index case
-data_wt_count = data_wt_count[growth == 0.01 & type != "random" & rep_ < 4, ]
+data_wt_count = data_wt_count[growth == 0.01 & type != "random" & rep_ == 2, ]
 
 data_wt_count = split(data_wt_count, by = "type")
 ```
@@ -193,93 +110,101 @@ data_wt_count = split(data_wt_count, by = "type")
 
 ```{r}
 plot_wt_evo = function(df) {
-  ggplot(df[growth == 0.01 & type != "random"])+
-  geom_hline(
-    yintercept = 0, lty = 2,
-    col = "grey"
-  )+
-  geom_tile(
-    aes(g, value, fill = pW),
-    width = 10
-  )+
-  scale_fill_continuous_sequential(
-    palette = "Lajolla",
-    rev = F,
-    trans = "sqrt",
-    limits = c(0.02, 1),
-    breaks = c(0.02, 0.25, 1),
-    na.value = "transparent",
-    label = scales::percent
-  )+
-  scale_y_continuous(
-    trans = ggallin::ssqrt_trans
-  )+
-  facet_grid(
-    rep_~variable, scales = "free_y",
-    labeller = labeller(
-      rep_ = label_both
+  ggplot(df)+
+    geom_hline(
+      yintercept = 0, lty = 2,
+      col = "grey"
+    )+
+    geom_tile(
+      aes(g, value, fill = pW),
+      width = 10
+    )+
+    scale_fill_continuous_sequential(
+      palette = "Inferno",
+      rev = T,
+      trans = "sqrt",
+      limits = c(0.02, 1),
+      breaks = c(0.02, 0.25, 1),
+      na.value = "transparent",
+      label = scales::percent
+    )+
+    scale_y_continuous(
+      trans = ggallin::ssqrt_trans,
+      breaks = c(-1, 0, 1)
+    )+
+    scale_x_continuous(
+      breaks = c(0, 50, 150, 250)
+    )+
+    facet_grid(
+      ~variable, scales = "free_y",
+      labeller = labeller(
+        rep_ = label_both
+      )
+    )+
+    theme_test(
+      base_size = 10
+    )+
+    theme(
+      axis.text.y = element_text(
+        angle = 90, hjust = 0.5
+      ),
+      legend.position = "top",
+      legend.key.height = unit(2, "mm"),
+      legend.key.width = unit(5, units = "mm"),
+      strip.background = element_blank(),
+      strip.text = element_text(
+        face = "italic"
+      )
+    )+
+    guides(
+      fill = guide_colorbar(
+        title.vjust = 1
+      )
+    )+
+    coord_cartesian(
+      ylim = c(-1, 1),
+      xlim = c(0, 250)
+    )+
+    labs(
+      x = "Generation",
+      y = "Scaled weight value",
+      fill = "% Agents"
     )
-  )+
-  theme_classic(
-    base_size = 10
-  )+
-  theme(
-    legend.position = "top",
-    legend.text = element_text(size = 8),
-    legend.title = element_text(size = 8),
-    legend.key.height = unit(1, "mm"),
-    # legend.key.height = unit(2, "mm"),
-    strip.background = element_blank(),
-    strip.text = element_text(
-      face = "italic"
-    ),
-    panel.border = element_rect(
-      colour = "grey",
-      fill = NA,
-      size = 0.1
-    )
-  )+
-  coord_cartesian(
-    ylim = c(-1, 1)
-  )+
-  labs(
-    x = "Generation",
-    y = "Scaled weight value",
-    fill = "% Agents"
-  )
 }
 ```
 
 ```{r}
+# apply fun over data
 plots_wt_evo = lapply(data_wt_count[c("exploit", "obligate")], plot_wt_evo)
-wrap_plots(plots_wt_evo)
+plots_wt_evo = wrap_plots(
+  plots_wt_evo, 
+  guides = "collect") +
+  plot_layout(tag_level = "new") & 
+  theme(legend.position = "bottom")
 ```
 
-## Wrap figures
+## Make Figure 1
 
-```{r}
-fig_evo_dyn =
+```{r figure_1}
+# make figure 1
+fig_1 =
   wrap_plots(
-    list(
-      plot_intake_gen,
-      plot_dist_gen,
-      plots_wt_evo[["exploit"]],
-      plots_wt_evo[["obligate"]]
-    ),
-    design = "AB\nAB\nCD\nCD\nCD"
-  ) +
+  plot_intake_gen
+) / wrap_plots(plots_wt_evo) &
   plot_annotation(
-    tag_levels = "A"
+    tag_levels = c("A", 1)
   ) &
   theme(
-    plot.tag = element_text(face = "bold")
+    plot.tag = element_text(
+      face = "bold"
+    )
   )
 
-# save
+# save figure 1
 ggsave(
-  fig_evo_dyn,
-  filename = "figures/fig_evo_dyn.png",
-  height = 6.5, width = 7
+  fig_1,
+  filename = "figures/fig_01.png",
+  height = 170,
+  width = 150, units = "mm"
 )
 ```
-
