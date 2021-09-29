@@ -47,9 +47,9 @@ data_sc_wt = fread("data/data_lt_wts_scaled.csv")
 data_sc_wt = data_sc_wt[growth %in% c(0.01, 0.03) & id < 100]
 
 # assign types
-data_sc_wt[, agent_strategy := dplyr::case_when(
+data_sc_wt[, move_strategy := dplyr::case_when(
   wt_4 > 0.6 ~ "prey tracking",
-  (wt_4 > 0 & wt_3 > 0 & abs(wt_4 - wt_3)) < 0.1 ~ "prey and handler tracking",
+  ((wt_4 > 0) & (wt_3 > 0) & (abs(wt_4 - wt_3) < 0.1))  ~ "prey and handler tracking",
   wt_3 > 0.5 ~ "handler tracking",
   wt_3 < -0.5 ~ "handler avoiding",
   wt_2 > 0.5 ~ "non-handler tracking",
@@ -60,19 +60,19 @@ data_sc_wt[, agent_strategy := dplyr::case_when(
 # get ids with each strategy per sim
 data_to_get = data_sc_wt[, 
   list(ids = list(head(unique(id)))), 
-  by = c("agent_strategy", "type", "growth", "rep_")
+  by = c("move_strategy", "comp_strat", "type", "growth", "rep_")
 ]
 
 # unlist
 data_to_get = data_to_get[, 
   list(id = unlist(ids)), 
-  by = c("type", "growth", "rep_", "agent_strategy")
+  by = c("type", "growth", "rep_", "move_strategy", "comp_strat")
 ]
 
 # select first four of all strategies
 data_to_get = data_to_get[, 
   .SD[seq(4)], 
-  by = c("type", "growth", "agent_strategy")
+  by = c("type", "growth", "move_strategy", "comp_strat")
 ]
 
 # drop NAs
@@ -100,7 +100,7 @@ paths_to_read = merge(data_to_get, params, all.x = T,
 # nest ids
 paths_to_read = paths_to_read[, list(
   ids = list(id)
-), by = c("type", "growth", "rep_", "agent_strategy", "paths")]
+), by = c("type", "growth", "rep_", "move_strategy", "comp_strat", "paths")]
 ```
 
 ```{r}
@@ -112,7 +112,7 @@ data_id[, data := Map(paths, ids, f = function(path, ids) {
 
 # unlist data
 data_id = data_id[, unlist(data, recursive = F), 
-  by = c("rep_", "growth", "type", "agent_strategy")
+  by = c("rep_", "growth", "type", "move_strategy", "comp_strat")
 ]
 
 # bind
