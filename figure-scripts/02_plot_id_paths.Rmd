@@ -22,33 +22,41 @@ data_sc_wt = fread("data/data_lt_wts_scaled.csv")
 data_sc_wt = data_sc_wt[growth %in% c(0.01, 0.03) & rep_ == 2]
 
 # assign strategy
-data_sc_wt[, agent_strategy := dplyr::case_when(
+data_sc_wt[, move_strategy := dplyr::case_when(
   wt_4 > 0.6 ~ "prey tracking",
-  abs(wt_4 - wt_3) < 0.1 ~ "prey and handler tracking",
+  ((wt_4 > 0) & (wt_3 > 0) & (abs(wt_4 - wt_3) < 0.1))  ~ "prey and handler tracking",
   wt_3 > 0.5 ~ "handler tracking",
   wt_3 < -0.5 ~ "handler avoiding",
   wt_2 > 0.5 ~ "non-handler tracking",
   wt_2 < -0.5 ~ "non-handler avoiding",
-  T ~ NA_character_
+  T ~ "other"
 )]
 ```
 
 ## Figures for movement paths
 
 ```{r}
-data = fread("data/data_lt_plot.csv")[growth %in% c(0.01, 0.03) & 
+data = fread("data/data_lt_plot.csv")[growth %in% c(0.01) & 
                                         interval %in% c(3, 6),]
 
 # select 2 agents per strategy
-data[, uid := id %in% first(unique(id)), by = c("growth", "type", "agent_strategy")]
+data[, uid := id %in% first(unique(id)), 
+     by = c("growth", "type", "move_strategy", "comp_strat")]
 data = data[(uid),]
 
 # remove some strategies
 data = data[
-  agent_strategy %in% 
-    c("prey tracking", "handler tracking", "non-handler avoiding",
-      "prey and handler tracking")
+  (type == "exploit" & (move_strategy %in% c(
+    "prey tracking", "prey and handler tracking", "non-handler avoiding",
+    "handler tracking"))) |
+    (type == "obligate" & (move_strategy %in% c(
+      "non-handler avoiding", "handler avoiding", "handler tracking")))
 ]
+
+# remove manually
+data = data[!(comp_strat == "klept" & move_strategy == "handler avoiding")]
+
+data = data[type != "interf"]
 ```
 
 ```{r}
@@ -60,28 +68,36 @@ plot_move = lapply(data, function(df) {
       aes(
         x_wrap, y_wrap, 
         group = interaction(id, interval, growth, rep_),
-        col = agent_strategy
+        col = move_strategy
       ),
-      show.legend = T
+      show.legend = F
     )+
-    scale_color_discrete_sequential(
-      palette = "Batlow",
-      labels = c(
-        "prey tracking" = "Prey tracking",
-        "handler tracking" = "Handler tracking",
-        "prey and handler tracking" = "Prey & handler tracking",
-        "non-handler avoiding" = "N. handler avoiding"
-      )
-    )+
-    facet_grid(
-      growth ~ interval, 
+    scale_colour_manual(
+        values = c(
+          "prey tracking" = "darkgreen",
+          "prey and handler tracking" = "darkblue",
+          "non-handler avoiding" = "red",
+          "handler avoiding" = "orange",
+          "handler tracking" = "steelblue"
+        ),
+        breaks = c(
+          "prey tracking",
+          "handler tracking",
+          "prey and handler tracking",
+          "non-handler avoiding",
+          "handler avoiding"
+        )
+      )+
+    facet_wrap(
+      comp_strat ~ interval, 
       labeller = labeller(
         .multi_line = F,
-        agent_strategy = c(
+        move_strategy = c(
           "prey tracking" = "Prey tracking",
           "handler tracking" = "Handler tracking",
           "prey and handler tracking" = "Prey & handler tracking",
-          "non-handler avoiding" = "N. handler avoiding"
+          "non-handler avoiding" = "N. handler avoiding",
+          "handler avoiding" = "Handler avoiding"
         ),
         growth = label_both,
         interval = c(
@@ -120,8 +136,8 @@ plot_move = lapply(data, function(df) {
     guides(
       colour = guide_legend(override.aes = list(
         size = 2
-      ),
-      nrow = 2, byrow = T, ncol = 2
+      )
+      # nrow = 2, byrow = T, ncol = 2
       )
     )+
     labs(
@@ -129,11 +145,12 @@ plot_move = lapply(data, function(df) {
     )
 })
 
-wrap_plots(
-  plot_move,
-  design = "AA\nBB",
-  ncol = 1
-)
+plot_move = wrap_plots(
+  plot_move, guides = "collect",
+  ncol = 1,
+  design = "AA\nBB\nBB"
+) + plot_layout(tag_level = "new")&
+  theme(legend.position = "top")
 ```
 
 ## Figure movement distance distribution
@@ -144,78 +161,98 @@ paths = list.files(path = "data/lt_tracks", full.names = T)
 # read files
 data_stats = lapply(paths, fread)
 # bind data
-data_stats = rbindlist(data_stats)
+data_stats = rbindlist(data_stats)[growth == 0.01]
 
 # link to data_stats
 data_stats = merge(data_stats[, !(c("wt_2", "wt_3", "wt_4"))], data_sc_wt, 
                    by = c("id", "growth", "type", "rep_", "intake", "gen"))
+
+# subset data for interesting strats
+data_stats = data_stats[
+  (type == "exploit" & (move_strategy %in% c(
+    "prey tracking", "prey and handler tracking", "non-handler avoiding",
+    "handler tracking"))) |
+    (type == "obligate" & (move_strategy %in% c(
+      "non-handler avoiding", "handler avoiding", "handler tracking")))
+]
+
+# only index growth
+
+# split data
+data_stats = split(data_stats, by = "type")
 ```
 
 ### Make plot
 
 ```{r}
 plot_dist_hist =
-  ggplot(data_stats[type != "random" &
-    agent_strategy %in% c("handler tracking", 
-      "prey tracking", "prey and handler tracking", "non-handler avoiding")  
-  ])+
-  stat_density(
-    geom = "line",
-    aes(
-      x = distance, y = ..density..,
-      col = agent_strategy
-    ),
-    position = "identity"
-  )+
-  scale_color_discrete_sequential(
-    palette = "Batlow",
-    labels = c(
-      "prey tracking" = "Prey tracking",
-      "handler tracking" = "Handler tracking",
-      "prey and handler tracking" = "Prey & handler tracking",
-      "non-handler avoiding" = "N. handler avoiding"
-    )
-  )+
-  facet_grid(type ~ growth,
-             labeller = labeller(
-               .multi_line = F,
-               growth = label_both,
-               type = c(
-                 "exploit" = "Exploit. comp.",
-                 "interf" = "Interf. comp."
-               )
-             )
-  )+
-  theme_classic(base_size = 10)+
-  theme(
-    legend.position = "top",
-    legend.text = element_text(size = 8),
-    legend.title = element_text(size = 8),
-    # legend.key.width = unit(2, "mm"),
-    legend.key.height = unit(1, "mm"),
-    strip.background = element_blank(),
-    strip.text = element_text(
-      face = "italic"
-    ),
-    panel.grid.minor = element_blank()
-  )+
-  coord_fixed(
-    expand = F,
-    xlim = c(0, 100),
-    ratio = 500
-  )+
-  guides(
-    colour = guide_legend(override.aes = list(
-      size = 2
-    ),
-    nrow = 2, byrow = T, ncol = 2
-    )
-  )+
-  labs(
-    colour = NULL,
-    y = "Tracks (density)",
-    x = "Distance"
-  )
+  lapply(data_stats, function(df) {
+    ggplot(df)+
+      geom_histogram(
+        aes(
+          x = distance,
+          fill = move_strategy
+        ),
+        binwidth = 5,
+        alpha = 0.6,
+        position = "identity"
+      )+
+      scale_fill_manual(
+        values = c(
+          "prey tracking" = "darkgreen",
+          "prey and handler tracking" = "darkblue",
+          "non-handler avoiding" = "red",
+          "handler avoiding" = "orange",
+          "handler tracking" = "steelblue"
+        ),
+        breaks = c(
+          "prey tracking",
+          "handler tracking",
+          "prey and handler tracking",
+          "non-handler avoiding",
+          "handler avoiding"
+        )
+      )+
+      facet_grid(
+        ~ comp_strat,
+        labeller = labeller(
+          .multi_line = F
+        )
+      )+
+      theme_test(base_size = 10)+
+      theme(
+        legend.position = "top",
+        legend.text = element_text(size = 8),
+        legend.title = element_text(size = 8),
+        # legend.key.width = unit(2, "mm"),
+        legend.key.height = unit(1, "mm"),
+        strip.background = element_blank(),
+        strip.text = element_text(
+          face = "italic"
+        ),
+        panel.grid.minor = element_blank()
+      )+
+      coord_cartesian(
+        expand = T
+        # xlim = c(0, 100)
+      )+
+      guides(
+        colour = guide_legend(override.aes = list(
+          size = 2
+        )#,
+        # nrow = 2, byrow = T, ncol = 2
+        )
+      )+
+      labs(
+        fill = NULL,
+        y = "# Tracks",
+        x = "Distance"
+      )
+  })
+
+plot_dist_hist = wrap_plots(plot_dist_hist, guides = "collect", ncol = 1) +
+  plot_layout(tag_level = "new") &
+  theme(legend.position = "bottom")
 ```
 
 ## Wrap all plots
@@ -224,21 +261,22 @@ plot_dist_hist =
 fig_id_var =
   wrap_plots(
     # plot_scaled_wt,
-    plot_move[[1]],
-    plot_move[[2]],
+    plot_move,
     plot_dist_hist,
-    design = "AABBCC"#, guides = "collect"
+    # design = "AABBCC"#, 
+    guides = "collect"
   ) +
-  plot_annotation(tag_levels = "A") &
+  plot_annotation(tag_levels = c("A", 1)) &
   theme(
+    legend.position = "top",
     plot.tag = element_text(face = "bold")
   )
 
 ggsave(
   plot = fig_id_var,
-  filename = "figures/fig_id_variation_distance.png",
-  width = 10,
-  height = 4
+  filename = "figures/fig_03.png",
+  width = 8,
+  height = 6
 )
 ```
 
