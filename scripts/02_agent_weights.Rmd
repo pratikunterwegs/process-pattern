@@ -60,7 +60,7 @@ fwrite(data, file = "data/data_lt_wt_gens.csv")
 data = fread("data/data_lt_wt_gens.csv")
 
 # select movement weights
-data = data[, !(sprintf("wt_%i", c(1, seq(5, 8))))]
+data = data[, !(sprintf("wt_%i", c(1, seq(6, 8))))]
 
 # scale by sum of absolute values
 data[, wt_abs_sum := apply(
@@ -74,6 +74,16 @@ data[, wt_abs_sum := apply(
 data[, c("wt_2", "wt_3", "wt_4") := lapply(
   .SD, `/`, wt_abs_sum
 ), .SDcols = c("wt_2", "wt_3", "wt_4")]
+
+# assign foraging strategy
+data[, comp_strat := dplyr::case_when(
+  type == "obligate" & wt_5 < 0 ~ "klept",
+  type == "interf" ~ "mixed",
+  T ~ "forager"
+)]
+
+# remove wt_5
+data$wt_5 = NULL
 ```
 
 Save scaled weights.
