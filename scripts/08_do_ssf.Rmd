@@ -14,6 +14,9 @@ library(amt)
 
 ```{r}
 paths = list.files(path = "data/ssf_data", full.names = T)
+
+# only foragers and obligate
+paths = paths[grep("exploit|obligate", paths)]
 ```
 
 ## Run SSF fits
