@@ -21,8 +21,9 @@ paths = list.files(path = "data/lt_tracks", full.names = T)
 
 # read files
 data = lapply(paths, fread)
+
 # bind data
-data = rbindlist(data)
+data = rbindlist(data)[type != "interf"]
 
 # remove all weights
 data_move = data[, !(c(sprintf("wt_%i", seq(8)), "gen"))]
@@ -42,7 +43,7 @@ fwrite(
   data_move,
   file = "data/data_for_rpt.csv"
 )
- rm(data)
+rm(data)
 ```
 
 ## Scale data
