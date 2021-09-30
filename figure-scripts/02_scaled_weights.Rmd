@@ -30,19 +30,8 @@ data = split(data, by = "type")
 ```{r}
 # read scaled weights
 data_sc_wt = fread("data/data_lt_wts_scaled.csv")
-data_sc_wt = data_sc_wt[growth %in% c(0.01) & rep_ < 4 & id < 100]
+data_sc_wt = data_sc_wt[growth %in% c(0.01) & rep_ == 2]
 data_sc_wt = data_sc_wt[type %in% c("exploit", "obligate")]
-
-# assign movement strategy
-data_sc_wt[, move_strategy := dplyr::case_when(
-  wt_4 > 0.6 ~ "prey tracking",
-  abs(wt_4 - wt_3) < 0.1 ~ "prey and handler tracking",
-  wt_3 > 0.5 ~ "handler tracking",
-  wt_3 < -0.5 ~ "handler avoiding",
-  wt_2 > 0.5 ~ "non-handler tracking",
-  wt_2 < -0.5 ~ "non-handler avoiding",
-  T ~ "other"
-)]
 
 # split by type
 data_sc_wt = split(data_sc_wt, by = "type")
@@ -72,7 +61,7 @@ plots = lapply(data_sc_wt, function(df) {
       shape = 21, col = alpha("grey30", 0.1),
       size = 3,
       show.legend = T,
-      alpha = 0.5
+      alpha = 0.4
     )+
     geom_text(
       data = data.table(
@@ -87,15 +76,12 @@ plots = lapply(data_sc_wt, function(df) {
       hjust = "inward",
       fontface = "italic"
     )+
-    scale_fill_continuous_diverging(
-      palette = "Blue-Red 2", 
-      rev = T,
-      # l2 = 90,
-      # l1 = 50,
+    scale_fill_distiller(
+      palette = "RdYlBu", 
+      direction = 1,
       limits = c(-1, 1),
       breaks = c(-1, 1),
-      labels = c("Non-handler avoiding", "Non-handler tracking"),
-      alpha = 1
+      labels = c("Non-handler avoiding", "Non-handler tracking")
     )+
     scale_x_continuous(
       # trans = ggallin::ssqrt_trans
@@ -121,7 +107,7 @@ plots = lapply(data_sc_wt, function(df) {
       ylim = c(-1, 1)
     )+
     theme_test(
-      base_size = 10
+      base_size = 8
     )+
     theme(
       strip.background = element_blank(),
@@ -129,7 +115,8 @@ plots = lapply(data_sc_wt, function(df) {
         face = "italic"
       ),
       legend.position = "top",
-      legend.key.height = unit(2, "mm")
+      legend.key.width = unit(5, units = "mm"),
+      legend.key.height = unit(1, "mm")
     )+
     labs(
       x = "sP",
@@ -161,23 +148,22 @@ plot_dist_gen = lapply(data, function(df) {
         # group = rep_,
         fill = ..count../1000
       ),
-      binwidth = c(10, 10)
+      binwidth = c(10, 5)
     )+
     scale_fill_continuous_sequential(
-      palette = "Batlow",
-      trans = "sqrt",
-      rev = T,
+      palette = "Heat 2",
+      # trans = "sqrt",
       labels = scales::percent,
-      breaks = c(0.02, 0.1, 0.3),
-      limits = c(0.02, 0.3),
+      breaks = c(0.01, 0.10),
+      limits = c(0.005, 0.10),
       na.value = "transparent"
     )+
     theme_test(
-      base_size = 10
+      base_size = 8
     )+
     theme(
       legend.key.width = unit(5, units = "mm"),
-      legend.key.height = unit(2, units = "mm")
+      legend.key.height = unit(1, units = "mm")
     )+
     guides(
       fill = guide_colorbar(
@@ -215,7 +201,8 @@ fig_2 =
     tag_levels = c("A", "1")
   ) & theme(legend.position = "bottom",
             plot.tag = element_text(
-              face = "bold"
+              face = "bold",
+              size = 10
             )
   )
 
