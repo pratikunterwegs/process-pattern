@@ -24,6 +24,9 @@ source("R/fun_custom_ssf_steps.R")
 ```{r}
 paths = list.dirs(path = "data", recursive = F)
 paths = paths[grep("sim", paths)]
+
+# only foragers and obligate
+paths = paths[grep("exploit|obligate", paths)]
 ```
 
 ```{r}
