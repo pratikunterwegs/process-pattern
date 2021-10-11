@@ -31,7 +31,7 @@ data_sc_wt[, move_strategy := dplyr::case_when(
   wt_3 < -0.5 ~ "handler avoiding",
   wt_2 > 0.5 ~ "non-handler tracking",
   wt_2 < -0.5 ~ "non-handler avoiding",
-  T ~ "other"
+  T ~ "mixed"
 )]
 
 data_sc_wt = split(data_sc_wt, by = "type")
@@ -62,7 +62,7 @@ plot_move_types = function(df) {
       shape = 21, col = alpha("grey30", 0.1),
       size = 3,
       show.legend = T,
-      alpha = 0.4
+      alpha = 0.05
     )+
     geom_text(
       data = data.table(
@@ -84,8 +84,8 @@ plot_move_types = function(df) {
         "non-handler avoiding" = "red",
         "handler avoiding" = "orange",
         "handler tracking" = "lightblue",
-        "other" = "transparent",
-        "NA" = "transparent"
+        "mixed" = "grey90",
+        "NA" = "grey90"
       ),
       breaks = c(
         "prey tracking",
@@ -93,8 +93,9 @@ plot_move_types = function(df) {
         "prey and handler tracking",
         "non-handler avoiding",
         "handler avoiding",
-        "other"
-      )
+        "mixed"
+      ),
+      na.value = "grey90"
     )+
     facet_grid(
       ~ comp_strat, 
@@ -161,13 +162,13 @@ data_stats = merge(data_stats[, !(c("wt_2", "wt_3", "wt_4"))], data_sc_wt,
                    by = c("id", "growth", "type", "rep_", "intake", "gen"))
 
 # subset data for interesting strats
-data_stats = data_stats[
-  (type == "exploit" & (move_strategy %in% c(
-    "prey tracking", "prey and handler tracking", "non-handler avoiding",
-    "handler tracking"))) |
-    (type == "obligate" & (move_strategy %in% c(
-      "non-handler avoiding", "handler avoiding", "handler tracking")))
-]
+# data_stats = data_stats[
+#   (type == "exploit" & (move_strategy %in% c(
+#     "prey tracking", "prey and handler tracking", "non-handler avoiding",
+#     "handler tracking"))) |
+#     (type == "obligate" & (move_strategy %in% c(
+#       "non-handler avoiding", "handler avoiding", "handler tracking")))
+# ]
 
 # split data
 data_stats = split(data_stats, by = "type")
@@ -195,7 +196,7 @@ plot_dist_hist =
           "non-handler avoiding" = "red",
           "handler avoiding" = "orange",
           "handler tracking" = "lightblue",
-          "other" = "grey90",
+          "mixed" = "grey90",
           "NA" = "grey90"
         ),
         breaks = c(
@@ -204,8 +205,9 @@ plot_dist_hist =
           "prey and handler tracking",
           "non-handler avoiding",
           "handler avoiding",
-          "other"
-        )
+          "mixed"
+        ),
+        na.value = "grey90"
       )+
       scale_y_continuous(
         labels = scales::comma
@@ -270,8 +272,8 @@ fig_id_var =
 ggsave(
   plot = fig_id_var,
   filename = "figures/fig_03.png",
-  width = 170,
-  height = 170,
+  width = 150,
+  height = 150,
   units = "mm"
 )
 ```
