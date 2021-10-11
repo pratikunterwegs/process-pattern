@@ -39,6 +39,19 @@ wt_data[, move_strategy := dplyr::case_when(
   wt_2 < -0.5 ~ "non-handler avoiding",
   T ~ "other"
 )]
+
+wt_data[, move_strategy := factor(
+  move_strategy, 
+  levels = c(
+    "prey tracking",
+    "handler tracking",
+    "prey and handler tracking",
+    "non-handler avoiding",
+    "handler avoiding",
+    "other"
+  )
+)
+]
 ```
 
 ## Link coefficients and weights
@@ -157,7 +170,7 @@ plot_ssf_box = lapply(data, function(df) {
       ),
       size = 0.2,
       width = 0.2,
-      alpha = 0.5
+      alpha = 0.4
     )+
     geom_boxplot(
       aes(
@@ -177,6 +190,16 @@ plot_ssf_box = lapply(data, function(df) {
         "other" = "lightgrey",
         "NA" = "transparent"
       ),
+      breaks = c(
+        "prey tracking",
+        "handler tracking",
+        "prey and handler tracking",
+        "non-handler avoiding",
+        "handler avoiding",
+        "other"
+      )
+    )+
+    scale_x_discrete(
       breaks = c(
         "prey tracking",
         "handler tracking",

@@ -3,7 +3,7 @@ editor_options:
   chunk_output_type: console
 ---
 
-# Plot repeatability over growth rates
+# Plot population composition and statistical analysis
 
 ```{r}
 library(data.table)
@@ -15,6 +15,137 @@ library(patchwork)
 ```{r}
 source("R/fun_wt_vals.R")
 ```
+
+## Load LT weights
+
+```{r}
+# read weight data and scale
+data_wt = fread("data/data_gens_dist_summary.csv")[g >= 200]
+data_wt[, wt_abs_sum := apply(
+  data_wt[, c("wt_2", "wt_3", "wt_4")], 
+  1, 
+  FUN = function(x) {
+    sum(abs(x))
+  })
+]
+
+data_wt[, c("wt_2", "wt_3", "wt_4") := lapply(
+  .SD, `/`, wt_abs_sum
+), .SDcols = c("wt_2", "wt_3", "wt_4")]
+
+# assign foraging strategy
+data_wt[, comp_strat := dplyr::case_when(
+  type == "obligate" & wt_5 < 0 ~ "klept",
+  type == "interf" ~ "mixed",
+  T ~ "forager"
+)]
+
+# movement strategy
+# assign strategy
+data_wt[, move_strat := dplyr::case_when(
+  wt_4 > 0.6 ~ "prey tracking",
+  ((wt_4 > 0) & (wt_3 > 0) & (abs(wt_4 - wt_3) < 0.1))  ~ "prey and handler tracking",
+  wt_3 > 0.5 ~ "handler tracking",
+  wt_3 < -0.5 ~ "handler avoiding",
+  wt_2 > 0.5 ~ "non-handler tracking",
+  wt_2 < -0.5 ~ "non-handler avoiding",
+  T ~ "mixed"
+)]
+
+data_wt[, move_strat := factor(
+  move_strat, 
+  levels = c(
+    "prey tracking",
+    "handler tracking",
+    "prey and handler tracking",
+    "non-handler avoiding",
+    "handler avoiding",
+    "mixed"
+  )
+)]
+
+# split data
+data_wt = split(data_wt, by = "type")
+data_wt = data_wt[c("exploit", "obligate")]
+```
+
+## Plot strategy evolution
+
+```{r}
+plot_strat_evol = lapply(data_wt, function(df) {
+  ggplot(
+  df
+) +
+  geom_bar(
+    aes(factor(growth), fill = move_strat)
+  )+
+  scale_fill_manual(
+    values = c(
+      "prey tracking" = "seagreen",
+      "prey and handler tracking" = "royalblue",
+      "non-handler avoiding" = "red",
+      "handler avoiding" = "orange",
+      "handler tracking" = "lightblue",
+      "mixed" = "grey"
+    ),
+    breaks = c(
+      "prey tracking",
+      "handler tracking",
+      "prey and handler tracking",
+      "non-handler avoiding",
+      "handler avoiding",
+      "mixed"
+    ),
+    na.value = "grey"
+  )+
+  theme_test(
+    base_size = 8
+  )+
+  theme(
+    strip.background = element_blank(),
+    strip.text = element_text(
+      face = "italic"
+    ),
+    axis.title.x = ggtext::element_markdown(),
+    axis.text.y = element_text(
+      angle = 90,
+      hjust = 0.5
+    ),
+    legend.position = "top",
+    legend.key.height = unit(2, "mm")
+  )+
+  coord_cartesian(expand = F, ylim = c(0, 6000))+
+  facet_grid(
+      ~ comp_strat, 
+      # ncol = 2, 
+      labeller = labeller(
+        .multi_line = F,
+        growth = label_both,
+        comp_strat = c(
+          "forager" = "Foragers",
+          "klept" = "Kleptoparasites"
+        )
+      )
+    )+
+  labs(
+    fill = "Movement strategy",
+    x = "Landscape productivity *r<sub>max</sub>*"
+  )
+})
+
+fig_pop_com = 
+wrap_plots(
+  plot_strat_evol, guides = "collect",
+  design = "ABB"
+) &
+  plot_layout(
+    tag_level = "new"
+  ) &
+  theme(
+    legend.position = "top"
+  )
+```
+
 
 ## Load repeatability
 
@@ -30,20 +161,19 @@ data = split(data, by = "type")
 
 rpt_plots = lapply(data, function(df) {
   ggplot(df)+
-    geom_vline(
-      xintercept = c(0.0033, 0.03),
-      col = 2,
-      lty = 2
-    )+
+    # geom_vline(
+    #   # xintercept = c(0.00330.03),
+    #   col = 2,
+    #   lty = 2
+    # )+
     geom_pointrange(
       aes(
-        growth, 
+        as.factor(growth), 
         rpt_v,
         ymin = rpt_v - rpt_se,
         ymax = rpt_v + rpt_se,
         fill = growth
       ),
-      alpha = 0.9,
       shape = 21,
       position = position_jitter(
         width = 0.01
@@ -56,7 +186,7 @@ rpt_plots = lapply(data, function(df) {
       # begin = 0.1,
       end = 1
     )+
-    scale_x_log10()+
+    # scale_x_log10()+
     # facet_wrap(~ type,
     #            ncol = 3,
     #            scales = "free_y",
@@ -84,8 +214,8 @@ rpt_plots = lapply(data, function(df) {
       )
     )+
     coord_cartesian(
-      expand = F,
-      xlim = c(0.9 * 1e-3, 0.035),
+      expand = T,
+      # xlim = c(0.01, 0.035),
       ylim = c(0, 1)
     )+
     labs(
@@ -97,7 +227,7 @@ rpt_plots = lapply(data, function(df) {
 ```
 
 ```{r}
-fig_rpt = 
+# fig_rpt = 
   wrap_plots(
     rpt_plots,
     ncol = 2
