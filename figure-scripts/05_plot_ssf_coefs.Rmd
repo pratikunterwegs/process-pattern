@@ -22,21 +22,23 @@ paths = list.files("data/ssf_fits", full.names = T)
 data = lapply(paths, fread)
 
 data = rbindlist(data)
+data = data[growth %in% c(0.01, 0.03)]
 ```
 
 ## Read agent weights
 
 ```{r}
-wt_data = fread("data/data_lt_wt_gens.csv")
-wt_data = wt_data[, c("id", "growth", "type", "rep_", 
-                      sprintf("wt_%i", c(2, 3, 4)))]
+wt_data = fread("data/data_lt_wts_scaled.csv")
 
-setnames(wt_data, old = c("wt_2", "wt_3", "wt_4"), 
-         new = c("sN", "sH", "sP"))
-
-# melt
-# wt_data = melt(wt_data, id.vars = c("id", "growth", "type", "rep_"),
-#   variable.name = "weight", value.name = "wt_val")
+wt_data[, move_strategy := dplyr::case_when(
+  wt_4 > 0.6 ~ "prey tracking",
+  ((wt_4 > 0) & (wt_3 > 0) & (abs(wt_4 - wt_3) < 0.1))  ~ "prey and handler tracking",
+  wt_3 > 0.5 ~ "handler tracking",
+  wt_3 < -0.5 ~ "handler avoiding",
+  wt_2 > 0.5 ~ "non-handler tracking",
+  wt_2 < -0.5 ~ "non-handler avoiding",
+  T ~ "other"
+)]
 ```
 
 ## Link coefficients and weights
@@ -58,185 +60,209 @@ data = merge(data, wt_data,
              all.x = T, all.y = F)
 
 data = data[id < 100,]
-```
-
-```{r}
-# class agents on wights
-data[, cluster := apply(
-  data[, c("sN", "sH", "sP")], 1, function(x){
-    which.max(abs(x))
-  })
-]
-data[, cluster := dplyr::case_when(
-  cluster == 1 ~ "Nhnd",
-  cluster == 2 ~ "Hand",
-  cluster == 3 ~ "Prey"
-)]
-data[, cluster := factor(cluster, levels = c("Prey", "Hand", "Nhnd"))]
 
 data = split(data, by = "type")
+data = data[c("exploit", "obligate")]
 ```
 
 ```{r}
-plots = lapply(data, function(df) {
+plot_ssf_hist = lapply(data, function(df) {
   ggplot(df)+
     geom_hline(
       yintercept = 0,
       lty = 2,
       col = 2
     )+
-  ggdist::stat_halfeye(
-    aes(factor(growth), ssf_R,
-        fill = growth),
-    col = "grey20",
-    alpha = 0.5,
-    point_colour = NA,
-    .width = 0,
-    adjust = .5,
-    show.legend = F
-  )+
-  geom_jitter(
-    aes(
-      factor(growth), ssf_R
-    ),
-    # col = "grey",
-    alpha = 0.1,
-    shape = 1,
-    size = 0.2,
-    width = 0.03
-  )+
-  geom_boxplot(
-    aes(
-      factor(growth), ssf_R
-    ),
-    width = .15, 
-    outlier.shape = NA,
-    position = position_dodge()
-  ) +
-  scale_fill_continuous_sequential(
-    palette = "Terrain 2"
-  )+
-  # facet_wrap(~ type, scales = "free_y")+
-  coord_flip()+
-  theme_classic(
-    base_size = 10
-  )+
-  theme(
-    axis.title.x = ggtext::element_markdown(),
-    axis.title.y = ggtext::element_markdown(),
-    axis.text.y = element_text(
-      angle = 90,
-      hjust = 0.5
-    ),
-    legend.position = "top",
-    legend.key.height = unit(2, "mm")
-  )+
-  labs(
-    y = "Relative selection for <i>r<i>",
-    x = "Landscape productivity *r<sub>max</sub>*"
-  )
-})
-```
-
-```{r}
-wrap_plots(
-  plots
-) +
-```
-
-
-```{r}
-plot_cluster = lapply(data, function(df) {
-    ggplot(df[growth %in% c(0.01, 0.0033, 0.03)])+
-      geom_jitter(
-        aes(
-          cluster, ssf_R,
-          col = cluster
-        ),
-        size = 0.1,
-        alpha = 0.2,
-        show.legend = F
-      )+
-      geom_boxplot(
-        aes(cluster, ssf_R),
-        fill = "grey",
-        alpha = 0.4,
-        show.legend = F,
-        outlier.colour = "grey40",
-        outlier.shape = 1,
-        width = 0.4
-      )+
-      scale_colour_manual(
-        values = c(
-          "Prey" = "darkgreen",
-          "Nhnd" = "indianred1",
-          "Hand" = "steelblue"
-        ),
-        breaks = c("Prey", "Hand", "Nhnd"),
-        labels = c("sP", "sH", "sN")
-      )+
-      scale_x_discrete(
-        breaks = c("Prey", "Hand", "Nhnd"),
-        labels = c("sP", "sH", "sN")
-      )+
-      facet_wrap(
-        ~growth, 
-        ncol = 3, 
-        scales = "free_y",
-        labeller = labeller(
-          growth = label_both,
-          .multi_line = F
-        ), 
-        drop = F
-      )+
-      theme_classic(base_size = 10)+
-      theme(
-        legend.position = "top",
-        legend.text = element_text(size = 8),
-        legend.title = element_text(size = 8),
-        strip.background = element_blank(),
-        strip.text = element_text(
-          face = "italic",
-          size = 6
-        ),
-        panel.grid.minor = element_blank(),
-        axis.title.y = ggtext::element_markdown()
-      )+
-      coord_cartesian(
-        expand = T,
-        xlim = c(1, 3),
-        ylim = c(-1, 8)
-      )+
-      labs(
-        y = "Relative selection for *r*",
-        x = "Strongest weight",
-        fill = "Strongest weight"
+    ggdist::stat_histinterval(
+      aes(
+        factor(growth), ssf_R,
+          fill = comp_strat
+      ),
+      col = "grey20",
+      # outline_bars = FALSE,
+      # binwidth = 0.2,
+      alpha = 0.7,
+      position = position_nudge(x = 0.0),
+      point_colour = NA
+    )+
+    scale_fill_manual(
+      values = c(
+        "forager" = "darkseagreen",
+        "klept" = "brown"
+      ),
+      labels = c(
+        "forager" = "Forager",
+        "klept" = "Kleptoparasite"
       )
-  })
+    )+
+    coord_flip(
+      expand = F,
+      xlim = c(0.8, NA),
+      ylim = c(-2, 10)
+    )+
+    theme_test(
+      base_size = 8
+    )+
+    theme(
+      axis.title.x = ggtext::element_markdown(),
+      axis.title.y = ggtext::element_markdown(),
+      axis.text.y = element_text(
+        angle = 90,
+        hjust = 0.5
+      ),
+      legend.position = "top",
+      legend.title = element_text(face = "bold"),
+      legend.key.height = unit(2, "mm")
+    )+
+    labs(
+      y = "Estimated relative selection for <i>r<i>",
+      x = "Landscape productivity *r<sub>max</sub>*",
+      fill = "Competitive strategy",
+      colour = "Movement strategy"
+    )+
+    guides(
+      fill = guide_legend(ncol = 2, title.position = "top"),
+      colour = guide_legend(ncol = 2, title.position = "top", 
+                            override.aes = list(size = 2))
+    )
+})
+
+plot_ssf_hist =
+  wrap_plots(
+  plot_ssf_hist, guides = "collect"
+)+
+  plot_layout(
+    tag_level = "new"
+  )
 ```
 
 ```{r}
-fig_ssf = 
-  wrap_plots(
-  append(
-    plots,
-    plot_cluster
-  )
+plot_ssf_box = lapply(data, function(df) {
+  ggplot(df[move_strategy %in% c(
+        "prey tracking",
+        "handler tracking",
+        "prey and handler tracking",
+        "non-handler avoiding",
+        "handler avoiding",
+        "other"
+      )])+
+    geom_hline(
+      yintercept = 0,
+      lty = 2,
+      col = 2
+    )+
+    geom_jitter(
+      aes(
+        move_strategy, ssf_R, col = move_strategy
+      ),
+      size = 0.2,
+      width = 0.2,
+      alpha = 0.5
+    )+
+    geom_boxplot(
+      aes(
+        move_strategy, ssf_R,
+      ),
+      width = 0.2,
+      fill = alpha("grey", 0.2), 
+      outlier.colour = NA
+    )+
+    scale_colour_manual(
+      values = c(
+        "prey tracking" = "seagreen",
+        "prey and handler tracking" = "royalblue",
+        "non-handler avoiding" = "red",
+        "handler avoiding" = "orange",
+        "handler tracking" = "lightblue",
+        "other" = "lightgrey",
+        "NA" = "transparent"
+      ),
+      breaks = c(
+        "prey tracking",
+        "handler tracking",
+        "prey and handler tracking",
+        "non-handler avoiding",
+        "handler avoiding",
+        "other"
+      )
+    )+
+    facet_grid(
+      ~ comp_strat, 
+      # ncol = 2, 
+      labeller = labeller(
+        .multi_line = F,
+        growth = label_both,
+        comp_strat = c(
+          "forager" = "Foragers",
+          "klept" = "Kleptoparasites"
+        )
+      )
+    )+
+    theme_test(
+      base_size = 8
+    )+
+    theme(
+      strip.background = element_blank(),
+      strip.text = element_text(
+        face = "italic"
+      ),
+      axis.title.x = ggtext::element_markdown(),
+      axis.title.y = ggtext::element_markdown(),
+      axis.text.x = element_blank(),
+      axis.text.y = element_text(
+        angle = 90,
+        hjust = 0.5
+      ),
+      legend.position = "top",
+      legend.title = element_text(face = "bold"),
+      legend.key.height = unit(2, "mm")
+    )+
+    coord_cartesian(
+      expand = F,
+      # xlim = c(0.8, NA),
+      ylim = c(-2, 10)
+    )+
+    labs(
+      y = "Estimated relative selection for <i>r<i>",
+      x = "Movement strategy",
+      fill = "Competitive strategy",
+      colour = "Movement strategy"
+    )+
+    guides(
+      colour = guide_legend(ncol = 3, title.position = "top", 
+                            override.aes = list(size = 2))
+    )
+})
+
+plot_ssf_box = wrap_plots(
+  plot_ssf_box, guides = "collect"
 ) +
+  plot_layout(
+    tag_level = "new"
+  )
+```
+
+```{r}
+plot_ssf = wrap_plots(
+  plot_ssf_hist,
+  plot_ssf_box,
+  ncol = 1
+)&
   plot_annotation(
-    tag_levels = "A"
-  ) &
+    tag_levels = c("A", 1)
+  )&
   theme(
     plot.tag = element_text(
       face = "bold"
-    )
+    ),
+    legend.position = "bottom"
   )
 
 ggsave(
-  fig_ssf,
-  filename = "figures/fig_ssf.png",
-  width = 6,
-  height = 6
+  plot_ssf,
+  filename = "figures/fig_05.png",
+  width = 170,
+  height = 150, units = "mm"
 )
 ```
 
