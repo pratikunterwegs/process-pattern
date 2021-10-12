@@ -98,6 +98,10 @@ plot_strat_evol = lapply(data_wt, function(df) {
     ),
     na.value = "grey"
   )+
+    scale_y_continuous(
+      labels = scales::comma,
+      breaks = c(1e3, 3e3, 6e3)
+    )+
   theme_test(
     base_size = 8
   )+
@@ -109,7 +113,8 @@ plot_strat_evol = lapply(data_wt, function(df) {
     axis.title.x = ggtext::element_markdown(),
     axis.text.y = element_text(
       angle = 90,
-      hjust = 0.5
+      hjust = 0.5,
+      size = 6
     ),
     legend.position = "top",
     legend.key.height = unit(2, "mm")
@@ -128,124 +133,263 @@ plot_strat_evol = lapply(data_wt, function(df) {
       )
     )+
   labs(
-    fill = "Movement strategy",
+    fill = NULL,
+    y = "# Agents",
     x = "Landscape productivity *r<sub>max</sub>*"
   )
 })
 
-fig_pop_com = 
+fig_pop_com =
 wrap_plots(
   plot_strat_evol, guides = "collect",
   design = "ABB"
 ) &
-  plot_layout(
-    tag_level = "new"
-  ) &
   theme(
-    legend.position = "top"
+    legend.position = "bottom"
+  )
+```
+
+## Load and plot repeatability data
+
+```{r}
+# load data
+load("data/data_rpt.Rds")
+```
+
+### Scenario 1
+
+```{r}
+# get data
+data_sc1 = copy(data_rpt[[1]])
+
+# make figure across growth rates
+fig_sc1_rpt = 
+  ggplot(data_sc1)+
+  geom_pointrange(
+    aes(
+      factor(growth), rpt_v,
+      ymin = rpt_v - rpt_se,
+      ymax = rpt_v + rpt_se,
+      fill = growth
+    ),
+    show.legend = F,
+    shape = 21,
+    alpha = 0.8,
+    position = position_jitter(width = 0.1)
+  )+
+  scale_fill_continuous_sequential(
+    palette = "Terrain"
+  )+
+  theme_bw(
+    base_size = 8
+  )+
+  theme(
+    axis.title.x = ggtext::element_markdown()
+  )+
+  coord_cartesian(
+    ylim = c(0, 1),
+    xlim = c(0.75, 3.25),
+    expand = F
+  )+
+  labs(
+    x = "*r<sub>max</sub>*",
+    y = "Repeatability"
+  )
+```
+
+### Scenario 2 not accounting for strategy
+
+```{r}
+# get data
+data_sc2 = copy(data_rpt[[2]])
+
+# make figure across growth rates
+fig_sc2_rpt =
+  ggplot(data_sc2)+
+  geom_pointrange(
+    aes(
+      factor(growth), rpt_v,
+      ymin = rpt_v - rpt_se,
+      ymax = rpt_v + rpt_se,
+      fill = growth
+    ),
+    show.legend = F,
+    shape = 21,
+    alpha = 0.8,
+    position = position_jitter(width = 0.1)
+  )+
+  scale_fill_continuous_sequential(
+    palette = "Terrain"
+  )+
+  theme_bw(
+    base_size = 8
+  )+
+  theme(
+    axis.title.x = ggtext::element_markdown()
+  )+
+  coord_cartesian(
+    ylim = c(0, 1),
+    xlim = c(0.75, 2.25),
+    expand = F
+  )+
+  labs(
+    x = "*r<sub>max</sub>*",
+    y = "Repeatability"
+  )
+```
+
+### Scenario 2 accounting for strategy
+
+```{r}
+# get data
+data_sc2_strat = copy(data_rpt[[3]])
+
+# make figure across growth rates
+fig_sc2_strat =
+  ggplot(data_sc2_strat)+
+  geom_pointrange(
+    aes(
+      factor(growth), rpt_v,
+      ymin = rpt_v - rpt_se,
+      ymax = rpt_v + rpt_se,
+      fill = growth
+    ),
+    show.legend = F,
+    shape = 21,
+    alpha = 0.8,
+    position = position_jitter(width = 0.1)
+  )+
+  scale_fill_continuous_sequential(
+    palette = "Terrain"
+  )+
+  theme_bw(
+    base_size = 8
+  )+
+  theme(
+    axis.title.x = ggtext::element_markdown()
+  )+
+  coord_cartesian(
+    ylim = c(0, 1),
+    xlim = c(0.75, 2.25),
+    expand = F
+  )+
+  labs(
+    x = "*r<sub>max</sub>*",
+    y = "Repeatability"
+  )
+```
+
+### Scenario 2 splitting by strategy
+
+```{r}
+# get data
+data_sc2_split = copy(data_rpt[[4]])
+
+# make figure across growth rates
+fig_sc2_split =
+  ggplot(data_sc2_split)+
+  geom_pointrange(
+    aes(
+      factor(growth), rpt_v,
+      ymin = rpt_v - rpt_se,
+      ymax = rpt_v + rpt_se,
+      fill = growth
+    ),
+    show.legend = F,
+    shape = 21,
+    alpha = 0.8,
+    position = position_jitter(width = 0.1)
+  )+
+  scale_fill_continuous_sequential(
+    palette = "Terrain"
+  )+
+  theme_bw(
+    base_size = 8
+  )+
+  theme(
+    strip.background = element_blank(),
+      strip.text = element_text(
+        face = "italic"
+      ),
+    axis.title.x = ggtext::element_markdown()
+  )+
+  facet_grid(
+      ~ comp_strat, 
+      # ncol = 2, 
+      labeller = labeller(
+        .multi_line = F,
+        comp_strat = c(
+          "forager" = "Foragers",
+          "klept" = "Kleptoparasites"
+        )
+      )
+    )+
+  coord_cartesian(
+    ylim = c(0, 1),
+    xlim = c(0.75, 2.25),
+    expand = F
+  )+
+  labs(
+    x = "*r<sub>max</sub>*",
+    y = "Repeatability"
+  )
+```
+
+```{r}
+wrap_plots(
+    fig_sc1_rpt | 
+      (wrap_plots(
+        fig_sc2_rpt, tag_level = "new"
+      ) / 
+      wrap_plots(
+        fig_sc2_strat | fig_sc2_split,
+        tag_level = "new"
+      )
+      )
+  ) &
+  plot_annotation(
+    tag_levels = c("A", "1", "a")
   )
 ```
 
 
-## Load repeatability
-
 ```{r}
-# load data
-data = fread("data/data_repeatability.csv")
-```
-
-## Plot repeatability
-
-```{r}
-data = split(data, by = "type")
-
-rpt_plots = lapply(data, function(df) {
-  ggplot(df)+
-    # geom_vline(
-    #   # xintercept = c(0.00330.03),
-    #   col = 2,
-    #   lty = 2
-    # )+
-    geom_pointrange(
-      aes(
-        as.factor(growth), 
-        rpt_v,
-        ymin = rpt_v - rpt_se,
-        ymax = rpt_v + rpt_se,
-        fill = growth
-      ),
-      shape = 21,
-      position = position_jitter(
-        width = 0.01
-      ),
-      show.legend = F
-    )+
-    scale_fill_continuous_qualitative(
-      palette = "Harmonic",
-      trans = "log10",
-      # begin = 0.1,
-      end = 1
-    )+
-    # scale_x_log10()+
-    # facet_wrap(~ type,
-    #            ncol = 3,
-    #            scales = "free_y",
-    #            labeller = labeller(
-    #              type = c(
-    #                "exploit" = "Exploit. comp.",
-    #                "interf" = "Interf. comp.",
-    #                "random" = "Random. move"
-    #              )
-    #            )
-    # )+
-    theme_classic(
-      base_size = 10
-    )+
-    theme(
-      strip.background = element_blank(),
-      strip.text = element_text(
-        face = "italic"
-      ),
-      axis.title.x = ggtext::element_markdown(),
-      panel.grid.major.y = element_line(
-        colour = "grey",
-        # size = 0.4,
-        linetype = 2
-      )
-    )+
-    coord_cartesian(
-      expand = T,
-      # xlim = c(0.01, 0.035),
-      ylim = c(0, 1)
-    )+
-    labs(
-      x = "Landscape productivity *r<sub>max</sub>*",
-      y = "Repeatability (+/- SE)"
-    )
-}
-)
-```
-
-```{r}
-# fig_rpt = 
+fig_rpt =
   wrap_plots(
-    rpt_plots,
-    ncol = 2
-  ) +
+    fig_pop_com,
+    tag_level = "new"
+  ) /
+  wrap_plots(
+    fig_sc1_rpt,
+    wrap_plots(
+      fig_sc2_rpt,
+      fig_sc2_strat,
+      fig_sc2_split,
+      tag_level = "new",
+      design = "ABCC"
+    ),
+    design = "ABBBB",
+    tag_level = "new"
+  ) / 
+  plot_layout(
+    design = "AA\nBB"
+  ) &
   plot_annotation(
-    tag_levels = "A"
+    tag_levels = c("A", "1", "a")
   ) &
   theme(
     plot.tag = element_text(
-      face = "bold"
+      face = "bold",
+      size = 8
     )
   )
 
 ggsave(
   fig_rpt,
-  filename = "figures/fig_repeatability.png",
-  width = 5.2,
-  height = 3
+  filename = "figures/fig_03.png",
+  width = 170,
+  height = 130,
+  units = "mm"
 )
 ```
 
