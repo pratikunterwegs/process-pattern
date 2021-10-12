@@ -27,6 +27,10 @@ data = rbindlist(data)[type != "interf"]
 
 # remove all weights
 data_move = data[, !(c(sprintf("wt_%i", seq(8)), "gen"))]
+
+# assign strategy
+data_move[, comp_strat := fifelse(data$wt_5 > 0, "forager", "klept")]
+data_move[type == "exploit", comp_strat := "forager"]
 ```
 
 ### Summarise over intervals
@@ -36,7 +40,7 @@ data_move = data_move[, list(
   mean_distance = mean(distance),
   sd_distance = sd(distance),
   mean_r = mean(mean_r)
-), by = c("id", "interval", "growth", "type", "rep_")]
+), by = c("id", "interval", "growth", "type", "rep_", "comp_strat")]
 
 # save
 fwrite(
@@ -49,45 +53,128 @@ rm(data)
 ## Scale data
 
 ```{r}
-data_scaled = data_move[, lapply(.SD, scales::rescale), 
-          by = c("growth", "type", "rep_", "interval")]
-data_scaled[, id := floor(id * 99)]
+data_move[, c("mean_distance", "sd_distance", "mean_r") := 
+            lapply(.SD, scales::rescale), 
+          by = c("growth", "type", "rep_", "interval"),
+          .SDcols = c("mean_distance", "sd_distance", "mean_r")]
 ```
 
 ## Repeatability analysis
 
-### Function for repeatability
+### Functions for repeatability
 
 ```{r}
+# basic function for repeatability
 get_repeatability = function(df) {
   rptR::rpt(mean_distance ~ mean_r + (1 | id) + (1 | interval), 
             grname = "id", 
             data = df, 
             datatype = "Gaussian", nboot = 100, npermut = 10)
 }
+
+# function for repeatability that accounts for
+# competitive strategy as a fixed effect
+get_repeatability_strat = function(df) {
+  rptR::rpt(mean_distance ~ mean_r + comp_strat + (1 | id) + (1 | interval), 
+            grname = "id", 
+            data = df, 
+            datatype = "Gaussian", nboot = 100, npermut = 10)
+}
 ```
 
-### Get repeatabilities
+### Get repeatabilities in scenario 1
 
 ```{r}
-# nest data
-data_scaled = data_scaled[, list(
+# nest data from scenario 1
+data_sc1 = data_move[type == "exploit", list(
   data = list(.SD)
 ), by = c("growth", "type", "rep_")]
 
 # apply function over nested data
-data_scaled[, mod_rpt := lapply(data, get_repeatability)]
+data_sc1[, mod_rpt := lapply(data, get_repeatability)]
 
-data_scaled[, c("rpt_v", "rpt_se") := list(
+data_sc1[, c("rpt_v", "rpt_se") := list(
   vapply(mod_rpt, function(m) m$R$id[1], FUN.VALUE = 1.0),
   vapply(mod_rpt, function(m) m$se$se[1], FUN.VALUE = 1.0)
 )]
 ```
 
-### Save data
+### Repeatability not accounting for competition strategy
 
 ```{r}
-data_rpt = data_scaled[, c("growth", "type", "rep_", "rpt_v", "rpt_se")]
+# nest data from scenario 2
+data_sc2 = data_move[type == "obligate" & growth <= 0.02, list(
+  data = list(.SD)
+), by = c("growth", "type", "rep_")]
 
-fwrite(data_rpt, file = "data/data_repeatability.csv")
+# apply function over nested data
+data_sc2[, mod_rpt := lapply(data, get_repeatability)]
+
+data_sc2[, c("rpt_v", "rpt_se") := list(
+  vapply(mod_rpt, function(m) m$R$id[1], FUN.VALUE = 1.0),
+  vapply(mod_rpt, function(m) m$se$se[1], FUN.VALUE = 1.0)
+)]
+```
+
+### Repeatability accounting for competition strategy
+
+```{r}
+# nest data from scenario 2
+data_sc2_strat = data_move[type == "obligate" & growth <= 0.02, list(
+  data = list(.SD)
+), by = c("growth", "type", "rep_")]
+
+# apply function over nested data
+data_sc2_strat[, mod_rpt := lapply(data, get_repeatability_strat)]
+
+data_sc2_strat[, c("rpt_v", "rpt_se") := list(
+  vapply(mod_rpt, function(m) m$R$id[1], FUN.VALUE = 1.0),
+  vapply(mod_rpt, function(m) m$se$se[1], FUN.VALUE = 1.0)
+)]
+```
+
+### Repeatability splitting by competition strategy
+
+```{r}
+# select data from scenario 2
+data_sc2_split = data_move[type == "obligate" & growth <= 0.02]
+
+# split by strategy
+data_sc2_split = data_sc2_split[, list(
+  data = list(.SD)
+), by = c("growth", "type", "rep_", "comp_strat")]
+
+# apply function over nested data
+data_sc2_split[, mod_rpt := lapply(data, get_repeatability)]
+
+data_sc2_split[, c("rpt_v", "rpt_se") := list(
+  vapply(mod_rpt, function(m) m$R$id[1], FUN.VALUE = 1.0),
+  vapply(mod_rpt, function(m) m$se$se[1], FUN.VALUE = 1.0)
+)]
+```
+
+## Prepare data for plotting
+
+```{r}
+# add identifier
+Map(
+  list(data_sc1, data_sc2, data_sc2_strat, data_sc2_split),
+  list("sc1", "sc2", "sc2_strat", "sc2_split"),
+  f = function(df, nm) df[, treat := nm]
+)
+```
+
+```{r}
+data_rpt = Map(
+  list(data_sc1, data_sc2, data_sc2_strat, data_sc2_split),
+  f = function(df) df[, !c("data", "mod_rpt")]
+)
+```
+
+```{r}
+# save as Rds object
+save(
+  data_rpt,
+  file = "data/data_rpt.Rds"
+)
 ```

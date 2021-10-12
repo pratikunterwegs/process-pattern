@@ -108,6 +108,9 @@ plot_ssf_hist = lapply(data, function(df) {
         "klept" = "Kleptoparasite"
       )
     )+
+    scale_y_continuous(
+      breaks = c(0, 1, 3, 5, 7, 9)
+    )+
     coord_flip(
       expand = F,
       xlim = c(0.8, NA),
@@ -123,6 +126,7 @@ plot_ssf_hist = lapply(data, function(df) {
         angle = 90,
         hjust = 0.5
       ),
+      axis.text.x = element_text(size = 6),
       legend.position = "top",
       legend.title = element_text(face = "bold"),
       legend.key.height = unit(2, "mm")
@@ -209,6 +213,9 @@ plot_ssf_box = lapply(data, function(df) {
         "other"
       )
     )+
+    scale_y_continuous(
+      breaks = c(0, 1, 3, 5, 7, 9)
+    )+
     facet_grid(
       ~ comp_strat, 
       # ncol = 2, 
@@ -253,7 +260,8 @@ plot_ssf_box = lapply(data, function(df) {
     )+
     guides(
       colour = guide_legend(ncol = 3, title.position = "top", 
-                            override.aes = list(size = 2))
+                            override.aes = list(size = 2,
+                                                alpha = 1))
     )
 })
 
@@ -261,7 +269,8 @@ plot_ssf_box = wrap_plots(
   plot_ssf_box, guides = "collect"
 ) +
   plot_layout(
-    tag_level = "new"
+    tag_level = "new",
+    design = "ABB"
   )
 ```
 
@@ -276,16 +285,17 @@ plot_ssf = wrap_plots(
   )&
   theme(
     plot.tag = element_text(
-      face = "bold"
+      face = "bold",
+      size = 8
     ),
     legend.position = "bottom"
   )
 
 ggsave(
   plot_ssf,
-  filename = "figures/fig_05.png",
-  width = 170,
-  height = 150, units = "mm"
+  filename = "figures/fig_04.png",
+  width = 120,
+  height = 120, units = "mm"
 )
 ```
 
