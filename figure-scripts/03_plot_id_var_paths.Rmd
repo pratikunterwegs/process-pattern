@@ -271,8 +271,8 @@ fig_id_var =
 
 ggsave(
   plot = fig_id_var,
-  filename = "figures/fig_03.png",
-  width = 150,
+  filename = "figures/fig_02.png",
+  width = 155,
   height = 150,
   units = "mm"
 )
