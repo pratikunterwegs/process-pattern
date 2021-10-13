@@ -170,15 +170,15 @@ fig_sc1_rpt =
       factor(growth), rpt_v,
       ymin = rpt_v - rpt_se,
       ymax = rpt_v + rpt_se,
-      fill = growth
+      fill = factor(growth)
     ),
     show.legend = F,
     shape = 21,
     alpha = 0.8,
     position = position_jitter(width = 0.1)
   )+
-  scale_fill_continuous_sequential(
-    palette = "Terrain"
+  scale_fill_manual(
+    values = rev(terrain.colors(3))
   )+
   theme_bw(
     base_size = 8
@@ -211,15 +211,15 @@ fig_sc2_rpt =
       factor(growth), rpt_v,
       ymin = rpt_v - rpt_se,
       ymax = rpt_v + rpt_se,
-      fill = growth
+      fill = factor(growth)
     ),
     show.legend = F,
     shape = 21,
     alpha = 0.8,
     position = position_jitter(width = 0.1)
   )+
-  scale_fill_continuous_sequential(
-    palette = "Terrain"
+  scale_fill_manual(
+    values = rev(terrain.colors(3))
   )+
   theme_bw(
     base_size = 8
@@ -252,15 +252,15 @@ fig_sc2_strat =
       factor(growth), rpt_v,
       ymin = rpt_v - rpt_se,
       ymax = rpt_v + rpt_se,
-      fill = growth
+      fill = factor(growth)
     ),
     show.legend = F,
     shape = 21,
     alpha = 0.8,
     position = position_jitter(width = 0.1)
   )+
-  scale_fill_continuous_sequential(
-    palette = "Terrain"
+  scale_fill_manual(
+    values = rev(terrain.colors(3))
   )+
   theme_bw(
     base_size = 8
@@ -293,15 +293,15 @@ fig_sc2_split =
       factor(growth), rpt_v,
       ymin = rpt_v - rpt_se,
       ymax = rpt_v + rpt_se,
-      fill = growth
+      fill = factor(growth)
     ),
     show.legend = F,
     shape = 21,
     alpha = 0.8,
     position = position_jitter(width = 0.1)
   )+
-  scale_fill_continuous_sequential(
-    palette = "Terrain"
+  scale_fill_manual(
+    values = rev(terrain.colors(3))
   )+
   theme_bw(
     base_size = 8
@@ -334,24 +334,6 @@ fig_sc2_split =
     y = "Repeatability"
   )
 ```
-
-```{r}
-wrap_plots(
-    fig_sc1_rpt | 
-      (wrap_plots(
-        fig_sc2_rpt, tag_level = "new"
-      ) / 
-      wrap_plots(
-        fig_sc2_strat | fig_sc2_split,
-        tag_level = "new"
-      )
-      )
-  ) &
-  plot_annotation(
-    tag_levels = c("A", "1", "a")
-  )
-```
-
 
 ```{r}
 fig_rpt =

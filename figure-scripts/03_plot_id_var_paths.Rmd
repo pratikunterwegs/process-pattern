@@ -137,7 +137,10 @@ plot_move_types = function(df) {
 }
 
 plots_move_types = lapply(data_sc_wt, plot_move_types) |>
-  wrap_plots(guides = "collect") +
+  wrap_plots(
+    guides = "collect",
+    design = "ABB"
+  ) +
   plot_layout(tag_level = "new") &
   theme(
     legend.position = "top"

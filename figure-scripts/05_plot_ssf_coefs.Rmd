@@ -22,7 +22,7 @@ paths = list.files("data/ssf_fits", full.names = T)
 data = lapply(paths, fread)
 
 data = rbindlist(data)
-data = data[growth %in% c(0.01, 0.03)]
+data = data[growth %in% c(0.01, 0.02, 0.03)]
 ```
 
 ## Read agent weights
@@ -37,7 +37,7 @@ wt_data[, move_strategy := dplyr::case_when(
   wt_3 < -0.5 ~ "handler avoiding",
   wt_2 > 0.5 ~ "non-handler tracking",
   wt_2 < -0.5 ~ "non-handler avoiding",
-  T ~ "other"
+  T ~ "mixed"
 )]
 
 wt_data[, move_strategy := factor(
@@ -48,7 +48,7 @@ wt_data[, move_strategy := factor(
     "prey and handler tracking",
     "non-handler avoiding",
     "handler avoiding",
-    "other"
+    "mixed"
   )
 )
 ]
@@ -92,7 +92,8 @@ plot_ssf_hist = lapply(data, function(df) {
           fill = comp_strat
       ),
       col = "grey20",
-      # outline_bars = FALSE,
+      slab_colour = "black",
+      slab_size = 0.2,
       # binwidth = 0.2,
       alpha = 0.7,
       position = position_nudge(x = 0.0),
@@ -108,13 +109,16 @@ plot_ssf_hist = lapply(data, function(df) {
         "klept" = "Kleptoparasite"
       )
     )+
+    scale_x_discrete(
+      limits = rev(c("0.01", "0.02", "0.03"))
+    )+
     scale_y_continuous(
-      breaks = c(0, 1, 3, 5, 7, 9)
+      breaks = c(0, 1, 3, 5, 7, 9),
+      limits = c(-2, 10)
     )+
     coord_flip(
       expand = F,
-      xlim = c(0.8, NA),
-      ylim = c(-2, 10)
+      xlim = c(0.8, NA)
     )+
     theme_test(
       base_size = 8
@@ -154,44 +158,46 @@ plot_ssf_hist =
 ```
 
 ```{r}
+# filter data for main strategies
+data = rbindlist(data)
+data_type_summary = data[
+  , .N, 
+  by = c("growth", "move_strategy", "rep_", 
+         "comp_strat", "type")
+]
+data_type_summary = data_type_summary[N > 10,]
+data = merge(data, data_type_summary)
+data = split(data, by = "type")
+
+# now plot
 plot_ssf_box = lapply(data, function(df) {
-  ggplot(df[move_strategy %in% c(
-        "prey tracking",
-        "handler tracking",
-        "prey and handler tracking",
-        "non-handler avoiding",
-        "handler avoiding",
-        "other"
-      )])+
+  ggplot(df)+
     geom_hline(
       yintercept = 0,
       lty = 2,
       col = 2
     )+
-    geom_jitter(
+    ggdist::stat_histinterval(
       aes(
-        move_strategy, ssf_R, col = move_strategy
+        factor(growth), ssf_R,
+          fill = move_strategy
       ),
-      size = 0.2,
-      width = 0.2,
-      alpha = 0.4
+      col = "grey20",
+      slab_colour = "black",
+      slab_size = 0.2,
+      # binwidth = 0.2,
+      alpha = 0.7,
+      position = position_nudge(x = 0.0),
+      point_colour = NA
     )+
-    geom_boxplot(
-      aes(
-        move_strategy, ssf_R,
-      ),
-      width = 0.2,
-      fill = alpha("grey", 0.2), 
-      outlier.colour = NA
-    )+
-    scale_colour_manual(
+    scale_fill_manual(
       values = c(
         "prey tracking" = "seagreen",
         "prey and handler tracking" = "royalblue",
         "non-handler avoiding" = "red",
         "handler avoiding" = "orange",
         "handler tracking" = "lightblue",
-        "other" = "lightgrey",
+        "mixed" = "lightgrey",
         "NA" = "transparent"
       ),
       breaks = c(
@@ -200,82 +206,63 @@ plot_ssf_box = lapply(data, function(df) {
         "prey and handler tracking",
         "non-handler avoiding",
         "handler avoiding",
-        "other"
-      )
-    )+
-    scale_x_discrete(
-      breaks = c(
-        "prey tracking",
-        "handler tracking",
-        "prey and handler tracking",
-        "non-handler avoiding",
-        "handler avoiding",
-        "other"
+        "mixed"
       )
     )+
     scale_y_continuous(
-      breaks = c(0, 1, 3, 5, 7, 9)
+      breaks = c(0, 1, 3, 5, 7, 9),
+      limits = c(-2, 10)
     )+
-    facet_grid(
-      ~ comp_strat, 
-      # ncol = 2, 
-      labeller = labeller(
-        .multi_line = F,
-        growth = label_both,
-        comp_strat = c(
-          "forager" = "Foragers",
-          "klept" = "Kleptoparasites"
-        )
-      )
+    scale_x_discrete(
+      limits = rev(c("0.01", "0.02", "0.03"))
+    )+
+    coord_flip(
+      expand = F,
+      xlim = c(0.8, NA)
     )+
     theme_test(
       base_size = 8
     )+
     theme(
-      strip.background = element_blank(),
-      strip.text = element_text(
-        face = "italic"
-      ),
       axis.title.x = ggtext::element_markdown(),
       axis.title.y = ggtext::element_markdown(),
-      axis.text.x = element_blank(),
       axis.text.y = element_text(
         angle = 90,
         hjust = 0.5
       ),
+      axis.text.x = element_text(size = 6),
       legend.position = "top",
       legend.title = element_text(face = "bold"),
       legend.key.height = unit(2, "mm")
     )+
-    coord_cartesian(
-      expand = F,
-      # xlim = c(0.8, NA),
-      ylim = c(-2, 10)
-    )+
     labs(
       y = "Estimated relative selection for <i>r<i>",
-      x = "Movement strategy",
-      fill = "Competitive strategy",
-      colour = "Movement strategy"
+      x = "Landscape productivity *r<sub>max</sub>*",
+      fill = "Movement strategy"
     )+
     guides(
+      fill = guide_legend(ncol = 3, title.position = "top"),
       colour = guide_legend(ncol = 3, title.position = "top", 
-                            override.aes = list(size = 2,
-                                                alpha = 1))
+                            override.aes = list(size = 2))
     )
 })
 
-plot_ssf_box = wrap_plots(
-  plot_ssf_box, guides = "collect"
-) +
+plot_ssf_box = 
+  wrap_plots(
+  plot_ssf_box,
+  guides = "collect"
+)+
   plot_layout(
-    tag_level = "new",
-    design = "ABB"
+    tag_level = "new"
+  ) &
+  theme(
+    legend.position = "top"
   )
 ```
 
 ```{r}
-plot_ssf = wrap_plots(
+plot_ssf =
+  wrap_plots(
   plot_ssf_hist,
   plot_ssf_box,
   ncol = 1
