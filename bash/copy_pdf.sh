@@ -1,3 +1,3 @@
 #!/bin/bash
 cd ..
-mv "ms-pattern-process"/main.pdf ../docs/main_`date -I`.pdf
+mv "ms-pattern-process"/main.pdf docs/ms-pattern-process_`date -I`.pdf
